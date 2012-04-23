@@ -48,15 +48,15 @@ class THBL (heartbeat.Proposer):
         heapq.heappush(self.q, (when + self.timestamp(), func_obj))
 
 
-    def send_prepare(self, node_uid, pnum):
+    def send_prepare(self, pnum):
         self.cp = pnum
         self.pcount += 1
 
-    def send_heartbeat(self, node_uid, pnum):
+    def send_heartbeat(self, pnum):
         self.hb = pnum
         self.hbcount += 1
 
-    def send_accept(self, node_uid, pnum, value):
+    def send_accept(self, pnum, value):
         self.ap = pnum
         self.acount += 1
         self.avalue = value

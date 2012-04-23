@@ -34,13 +34,13 @@ class Proposer (basic.Proposer):
     #------------------------------
     # Subclass API
     #
-    def send_prepare(self, node_uid, proposal_num):
+    def send_prepare(self, proposal_num):
         raise NotImplementedError
 
-    def send_accept(self, node_uid, proposal_num, proposal_value):
+    def send_accept(self, proposal_num, proposal_value):
         raise NotImplementedError
 
-    def send_heartbeat(self, node_uid, leader_proposal_number):
+    def send_heartbeat(self, leader_proposal_number):
         raise NotImplementedError
 
     def schedule(self, msec_delay, func_obj):
@@ -78,7 +78,7 @@ class Proposer (basic.Proposer):
         '''        
         if self._acquiring:
             # XXX Could add a random delay here to reduce the chance of collisions
-            self.send_prepare( self.my_uid, self._acquiring )
+            self.send_prepare( self._acquiring )
             
         elif not self.leader_is_alive():
             self.acquire_leadership()
@@ -117,7 +117,7 @@ class Proposer (basic.Proposer):
     def pulse(self):
         if self.leader:
             self.recv_heartbeat(self.my_uid, self.leader_pnum)
-            self.send_heartbeat(self.my_uid, self.leader_pnum)
+            self.send_heartbeat(self.leader_pnum)
             self.schedule(self.hb_period, self.pulse)
 
 
@@ -128,7 +128,7 @@ class Proposer (basic.Proposer):
 
         else:
             self._acquiring = self.prepare()
-            self.send_prepare( self.my_uid, self._acquiring )
+            self.send_prepare( self._acquiring )
 
 
         
@@ -144,7 +144,7 @@ class Proposer (basic.Proposer):
 
             # If we have a value to propose, do so.
             if self.value is not None:
-                self.send_accept( self.my_uid, self.proposal_number, self.value )
+                self.send_accept( self.proposal_number, self.value )
 
         return r
 
