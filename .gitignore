@@ -1,0 +1,4 @@
+*\.pyc
+*\.pid
+*_trial_temp*
+*\.so\.*
