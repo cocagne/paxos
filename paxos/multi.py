@@ -6,19 +6,19 @@ class InvalidInstanceNumber (Exception):
     pass
 
 
-class BasicNodeFactory (object):
+
     
-    @staticmethod
-    def create_node( quorum_size, resolution_callback, multipaxos_obj ):
-        return basic.Node( basic.Proposer(quorum_size),
-                           basic.Acceptor(),
-                           basic.Learner(quorum_size),
-                           resolution_callback )
+@staticmethod
+def basic_node_factory( quorum_size, resolution_callback, multipaxos_obj ):
+    return basic.Node( basic.Proposer(quorum_size),
+                       basic.Acceptor(),
+                       basic.Learner(quorum_size),
+                       resolution_callback )
 
     
 class MultiPaxos (object):
 
-    node_factory = BasicNodeFactory
+    node_factory = basic_node_factory
     
     def __init__(self, node_uid, quorum_size, instance_num=1 ):
         self.uid          = node_uid
@@ -31,7 +31,7 @@ class MultiPaxos (object):
         
     def _next_instance(self):
         self.instance_num += 1
-        self.node          = self.node_factory.create_node( self.quorum_size, self._on_resolution, self )
+        self.node          = self.node_factory( self.quorum_size, self._on_resolution, self )
         
 
     def _on_resolution(self, value):
@@ -42,6 +42,11 @@ class MultiPaxos (object):
 
     def on_proposal_resolution(self, instance_num, value):
         pass
+
+    
+    def set_instance_number(self, instance_number):
+        self.instance_num = instance_number - 1
+        self._next_instance()
 
 
     # --- basic.Node wrappers ---
