@@ -9,7 +9,7 @@ class InvalidInstanceNumber (Exception):
 
     
 @staticmethod
-def basic_node_factory( quorum_size, resolution_callback, multipaxos_obj ):
+def basic_node_factory( quorum_size, resolution_callback ):
     return basic.Node( basic.Proposer(quorum_size),
                        basic.Acceptor(),
                        basic.Learner(quorum_size),
@@ -31,7 +31,7 @@ class MultiPaxos (object):
         
     def _next_instance(self):
         self.instance_num += 1
-        self.node          = self.node_factory( self.quorum_size, self._on_resolution, self )
+        self.node          = self.node_factory( self.quorum_size, self._on_resolution )
         
 
     def _on_resolution(self, value):

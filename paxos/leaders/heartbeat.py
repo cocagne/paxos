@@ -64,6 +64,10 @@ class Proposer (basic.Proposer):
 
         if hb_period:       self.hb_period       = hb_period
         if liveness_window: self.liveness_window = liveness_window
+
+        if my_uid == leader_uid:
+            self.leader      = True
+            self.leader_pnum = 1
         
 
         
