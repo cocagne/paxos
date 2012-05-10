@@ -31,7 +31,7 @@ class THBL (heartbeat.Proposer):
         self.avalue = None
         self.tleader = None
 
-        super(THBL,self).__init__(1, 3, PVALUE)
+        super(THBL,self).__init__('uid', 3, PVALUE)
 
 
     def tadvance(self, incr=1):
@@ -87,17 +87,17 @@ class HeartbeatProposerTester (unittest.TestCase):
             self.assertEquals( self.l._acquiring, None )
             
         self.p()
-        self.assertEquals( self.l._acquiring, 1 )
+        self.assertEquals( self.l._acquiring, (1,'uid') )
 
 
     def test_initial_leader(self):
-        self.l.leader_uid = 2
+        self.l.leader_uid = 'other'
         
         for i in range(1,7):
             self.p()
             self.assertEquals( self.l._acquiring, None )
 
-        self.l.recv_heartbeat( 2, 1 )
+        self.l.recv_heartbeat( (1,'other') )
         
         self.p()
         self.assertEquals( self.l._acquiring, None )
@@ -107,16 +107,15 @@ class HeartbeatProposerTester (unittest.TestCase):
         for i in range(1,7):
             self.p()
 
-
         self.assertEquals( self.l.pcount, 0 )
         self.assertEquals( self.l.cp,     0 )
         self.p()
         self.assertEquals( self.l.pcount, 1 )
-        self.assertEquals( self.l.cp,     1 )
+        self.assertEquals( self.l.cp,     (1, 'uid') )
 
-        self.assertEquals(self.l.recv_promise(2, 1, None, None), None)
-        self.assertEquals(self.l.recv_promise(3, 1, None, None), None)
-        self.assertEquals(self.l.recv_promise(4, 1, None, None), (1, PVALUE))
+        self.assertEquals(self.l.recv_promise(2, (1,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(3, (1,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(4, (1,'uid'), None, None), ((1,'uid'), PVALUE))
 
         self.assertEquals( self.l.tleader, 'gained' )
 
@@ -130,14 +129,14 @@ class HeartbeatProposerTester (unittest.TestCase):
         self.assertEquals( self.l.cp,     0 )
         self.p()
         self.assertEquals( self.l.pcount, 1 )
-        self.assertEquals( self.l.cp,     1 )
+        self.assertEquals( self.l.cp,     (1,'uid') )
 
-        self.assertEquals(self.l.recv_promise(2, 1, None, None), None)
-        self.assertEquals(self.l.recv_promise(3, 1, None, None), None)
+        self.assertEquals(self.l.recv_promise(2, (1,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(3, (1,'uid'), None, None), None)
 
-        self.l.recv_proposal_rejected(2, 5)
+        self.l.recv_proposal_rejected(2, (5,'other'))
         
-        self.assertEquals(self.l.recv_promise(4, 1, None, None), (1, PVALUE))
+        self.assertEquals(self.l.recv_promise(4, (1,'uid'), None, None), ((1,'uid'), PVALUE))
 
         self.assertEquals( self.l.tleader, None )
 
@@ -150,14 +149,14 @@ class HeartbeatProposerTester (unittest.TestCase):
         self.assertEquals( self.l.cp,     0 )
         self.p()
         self.assertEquals( self.l.pcount, 1 )
-        self.assertEquals( self.l.cp,     1 )
+        self.assertEquals( self.l.cp,     (1,'uid') )
 
-        self.assertEquals(self.l.recv_promise(2, 1, None, None), None)
-        self.assertEquals(self.l.recv_promise(3, 1, None, None), None)
+        self.assertEquals(self.l.recv_promise(2, (1,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(3, (1,'uid'), None, None), None)
 
-        self.l.recv_proposal_rejected(2, 0)
+        self.l.recv_proposal_rejected((2,'other'), 0)
         
-        self.assertEquals(self.l.recv_promise(4, 1, None, None), (1, PVALUE))
+        self.assertEquals(self.l.recv_promise(4, (1,'uid'), None, None), ((1,'uid'), PVALUE))
 
         self.assertEquals( self.l.tleader, 'gained' )
 
@@ -165,11 +164,11 @@ class HeartbeatProposerTester (unittest.TestCase):
     def test_lose_leader(self):
         self.test_gain_leader()
 
-        self.assertEquals( self.l.leader_uid, 1 )
+        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
         
-        self.l.recv_heartbeat( 2, 5 )
+        self.l.recv_heartbeat( (5,'other') )
 
-        self.assertEquals( self.l.leader_uid, 2 )
+        self.assertEquals( self.l.leader_proposal_id, (5,'other') )
         self.assertEquals( self.l.tleader, 'lost' )
 
 
@@ -180,14 +179,14 @@ class HeartbeatProposerTester (unittest.TestCase):
             self.p()
 
         self.assertEquals( self.l.pcount, 1 )
-        self.assertEquals( self.l.cp,     1 )
+        self.assertEquals( self.l.cp,     (1,'uid') )
         self.p()
         self.assertEquals( self.l.pcount, 2 )
-        self.assertEquals( self.l.cp,     6 )
+        self.assertEquals( self.l.cp,     (6,'uid') )
 
-        self.assertEquals(self.l.recv_promise(2, 6, None, None), None)
-        self.assertEquals(self.l.recv_promise(3, 6, None, None), None)
-        self.assertEquals(self.l.recv_promise(4, 6, None, None), (6, PVALUE))
+        self.assertEquals(self.l.recv_promise(2, (6,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(3, (6,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(4, (6,'uid'), None, None), ((6,'uid'), PVALUE))
 
         self.assertEquals( self.l.tleader, 'gained' )
         
@@ -196,9 +195,9 @@ class HeartbeatProposerTester (unittest.TestCase):
     def test_ignore_old_leader_heartbeat(self):
         self.test_lose_leader()
 
-        self.l.recv_heartbeat( 1, 1 )
+        self.l.recv_heartbeat( (1,'uid') )
 
-        self.assertEquals( self.l.leader_uid, 2 )
+        self.assertEquals( self.l.leader_proposal_id, (5,'other') )
 
 
     def test_pulse(self):
@@ -208,7 +207,7 @@ class HeartbeatProposerTester (unittest.TestCase):
             self.l.tadvance()
 
         self.assertEquals( self.l.hbcount, 5 )
-        self.assertEquals( self.l.leader_uid, 1 )
+        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
         self.assertTrue( self.l.leader_is_alive() )
 
 
@@ -220,21 +219,21 @@ class HeartbeatProposerTester (unittest.TestCase):
         self.assertEquals( self.l.cp,     0 )
         self.p()
         self.assertEquals( self.l.pcount, 1 )
-        self.assertEquals( self.l.cp,     1 )
+        self.assertEquals( self.l.cp,     (1,'uid') )
 
-        self.assertEquals(self.l.recv_promise(2, 1, None, None), None)
-        self.assertEquals(self.l.recv_promise(3, 1, None, None), None)
+        self.assertEquals(self.l.recv_promise(2, (1,'uid'), None, None), None)
+        self.assertEquals(self.l.recv_promise(3, (1,'uid'), None, None), None)
 
         for i in range(0,6):
             self.assertEquals( self.l.pcount, 1 )
-            self.assertEquals( self.l.cp,     1 )
+            self.assertEquals( self.l.cp,     (1,'uid') )
 
         self.p()
 
         self.assertEquals( self.l.pcount, 2 )
-        self.assertEquals( self.l.cp,     1 )
+        self.assertEquals( self.l.cp,     (1,'uid') )
 
-        self.assertEquals(self.l.recv_promise(4, 1, None, None), (1, PVALUE))
+        self.assertEquals(self.l.recv_promise(4, (1,'uid'), None, None), ((1,'uid'), PVALUE))
 
         self.assertEquals( self.l.tleader, 'gained' )
         

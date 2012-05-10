@@ -34,13 +34,13 @@ class Proposer (basic.Proposer):
     #------------------------------
     # Subclass API
     #
-    def send_prepare(self, proposal_num):
+    def send_prepare(self, proposal_id):
         raise NotImplementedError
 
-    def send_accept(self, proposal_num, proposal_value):
+    def send_accept(self, proposal_id, proposal_value):
         raise NotImplementedError
 
-    def send_heartbeat(self, leader_proposal_number):
+    def send_heartbeat(self, leader_proposal_id):
         raise NotImplementedError
 
     def schedule(self, msec_delay, func_obj):
@@ -55,19 +55,18 @@ class Proposer (basic.Proposer):
     
     def __init__(self, my_uid, quorum_size, proposed_value=None, leader_uid=None,
                  hb_period=None, liveness_window=None):
-        super(Proposer, self).__init__(quorum_size, proposed_value)
-        self.my_uid       = my_uid
-        self.leader_uid   = leader_uid
-        self.leader_pnum  = None
-        self._tlast       = self.timestamp()
-        self._acquiring   = None # holds proposal number for our leadership request
+        super(Proposer, self).__init__(my_uid, quorum_size, proposed_value)
+        
+        self.leader_proposal_id  = None
+        self._tlast              = self.timestamp()
+        self._acquiring          = None # holds proposal id for our leadership request
 
         if hb_period:       self.hb_period       = hb_period
         if liveness_window: self.liveness_window = liveness_window
 
-        if my_uid == leader_uid:
-            self.leader      = True
-            self.leader_pnum = 1
+        if self.proposer_uid == leader_uid:
+            self.leader             = True
+            self.leader_proposal_id = (1, self.proposer_uid)
         
 
         
@@ -98,30 +97,31 @@ class Proposer (basic.Proposer):
             self.value = value
 
             if self.leader:
-                self.send_accept( self.my_uid, self.proposal_number, self.value )
+                self.send_accept( self.proposal_id, self.value )
 
 
             
-    def recv_heartbeat(self, node_uid, leader_proposal_number):
-        if leader_proposal_number > self.leader_pnum:
+    def recv_heartbeat(self, proposal_id):
+        leader_proposal_number, node_uid = proposal_id
+        
+        if proposal_id > self.leader_proposal_id:
             # Change of leadership
-            self.leader_uid  = node_uid
-            self.leader_pnum = leader_proposal_number
+            self.leader_proposal_id = proposal_id
 
-            if self.leader and self.leader_uid != self.my_uid:
+            if self.leader and proposal_id[1] != self.proposer_uid:
                 self.leader = False
                 self.on_leadership_lost()
-                self.observe_proposal( leader_proposal_number )
+                self.observe_proposal( proposal_id )
 
-        if self.leader_pnum == leader_proposal_number:
+        if self.leader_proposal_id == proposal_id:
             self._tlast = self.timestamp()
                 
 
             
     def pulse(self):
         if self.leader:
-            self.recv_heartbeat(self.my_uid, self.leader_pnum)
-            self.send_heartbeat(self.leader_pnum)
+            self.recv_heartbeat( self.proposal_id )
+            self.send_heartbeat( self.proposal_id )
             self.schedule(self.hb_period, self.pulse)
 
 
@@ -136,26 +136,25 @@ class Proposer (basic.Proposer):
 
 
         
-    def recv_promise(self, acceptor_uid, proposal_number, prev_proposal_number, prev_proposal_value):
-        r = super(Proposer, self).recv_promise(acceptor_uid, proposal_number, prev_proposal_number, prev_proposal_value)
+    def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
+        r = super(Proposer, self).recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
 
         if r and self._acquiring:
-            self.leader_uid  = self.my_uid
-            self.leader_pnum = self._acquiring
-            self._acquiring  = None
+            self.leader_proposal_id = self.proposal_id
+            self._acquiring         = None
             self.pulse()
             self.on_leadership_acquired()
 
             # If we have a value to propose, do so.
             if self.value is not None:
-                self.send_accept( self.proposal_number, self.value )
+                self.send_accept( self.proposal_id, self.value )
 
         return r
 
 
     
-    def recv_proposal_rejected(self, acceptor_uid, proposal_number):
-        if proposal_number > self._acquiring:
+    def recv_proposal_rejected(self, acceptor_uid, proposal_id):
+        if proposal_id > self._acquiring:
             self._acquiring = None
 
         

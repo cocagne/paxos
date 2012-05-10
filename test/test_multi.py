@@ -11,8 +11,8 @@ from paxos import multi
 import test_basic
 
 class MultiToBasic ( multi.MultiPaxos ):
-    def __init__(self, quorum_size=3, proposed_value=None):
-        super(MultiToBasic, self).__init__(1, quorum_size)
+    def __init__(self, proposer_uid='uid', quorum_size=3, proposed_value=None):
+        super(MultiToBasic, self).__init__(proposer_uid, quorum_size)
         if proposed_value is not None:
             self.node.set_proposal(proposed_value)
 

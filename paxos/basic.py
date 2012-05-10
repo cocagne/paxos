@@ -10,10 +10,11 @@ only.
 
 class Proposer (object):
 
-    def __init__(self, quorum_size, proposed_value=None):
-        self.proposal_number      = None
+    def __init__(self, proposer_uid, quorum_size, proposed_value=None):
+        self.proposer_uid         = proposer_uid
+        self.proposal_id          = None
         self.next_proposal_number = 1
-        self.accepted_number      = None
+        self.accepted_id      = None
         self.replied              = set()
         self.value                = proposed_value
         self.quorum_size          = quorum_size
@@ -32,53 +33,54 @@ class Proposer (object):
             
     def prepare(self):
         '''
-        Returns a new proposal number that is higher than any previously seen proposal number
+        Returns a new proposal id that is higher than any previously seen proposal id.
+        The proposal id is a tuple of (proposal_numer, proposer_uid)
         '''
         self.leader  = False
         self.replied = set()
 
-        self.proposal_number = self.next_proposal_number
+        self.proposal_id = (self.next_proposal_number, self.proposer_uid)
         
         self.next_proposal_number += 1
         
-        return self.proposal_number
+        return self.proposal_id
 
     
 
-    def  observe_proposal(self, proposal_number):
+    def  observe_proposal(self, proposal_id):
         '''
         Optional method used to update the proposal counter as proposals are seen on the network.
         When co-located with Acceptors and/or Learners, this method may be used to avoid a message
         delay when attempting to assume leadership (guaranteed NACK if the proposal number is too low).
         '''
-        if proposal_number >= self.next_proposal_number:
-            self.next_proposal_number = proposal_number + 1
+        if proposal_id >= (self.next_proposal_number, self.proposer_uid):
+            self.next_proposal_number = proposal_id[0] + 1
 
 
 
-    def recv_promise(self, acceptor_uid, proposal_number, prev_proposal_number, prev_proposal_value):
+    def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         '''
         acceptor_uid - Needed to ensure duplicate messages from this node are ignored
         
         Returns: None for no action or (proposal_number, value) for Accept! message
         '''
-        if proposal_number >= self.next_proposal_number:
-            self.next_proposal_number = proposal_number + 1
+        if proposal_id >= (self.next_proposal_number, self.proposer_uid):
+            self.next_proposal_number = proposal_id[0] + 1
             
-        if self.leader or proposal_number != self.proposal_number or acceptor_uid in self.replied:
+        if self.leader or proposal_id != self.proposal_id or acceptor_uid in self.replied:
             return
 
         self.replied.add( acceptor_uid )
         
-        if prev_proposal_number > self.accepted_number:
-            self.accepted_number = prev_proposal_number
-            self.value           = prev_proposal_value
+        if prev_proposal_id > self.accepted_id:
+            self.accepted_id = prev_proposal_id
+            self.value       = prev_proposal_value
 
         if len(self.replied) == self.quorum_size:
 
             self.leader = True
 
-            return self.proposal_number, self.value
+            return self.proposal_id, self.value
 
 
 
@@ -87,31 +89,31 @@ class Acceptor (object):
 
     
     def __init__(self):
-        self.promised_number = None
+        self.promised_id = None
         self.accepted_value  = None
-        self.accepted_number = None
+        self.accepted_id = None
 
         
-    def recv_prepare(self, proposal_number):
+    def recv_prepare(self, proposal_id):
         '''
-        Returns: None on prepare failed. (proposal_number, promised_number, accepted_value) on success
+        Returns: None on prepare failed. (proposal_id, promised_id, accepted_value) on success
         '''
-        if proposal_number > self.promised_number:
-            prev = self.promised_number
+        if proposal_id > self.promised_id:
+            prev = self.promised_id
             
-            self.promised_number = proposal_number
+            self.promised_id = proposal_id
 
-            return proposal_number, prev, self.accepted_value
+            return proposal_id, prev, self.accepted_value
 
         
-    def recv_accept_request(self, proposal_number, value):
+    def recv_accept_request(self, proposal_id, value):
         '''
-        Returns: None on request denied. (proposal_number, accepted_value) on accepted
+        Returns: None on request denied. (proposal_id, accepted_value) on accepted
         '''
-        if proposal_number >= self.promised_number:
+        if proposal_id >= self.promised_id:
             self.accepted_value  = value
-            self.promised_number = proposal_number
-            return proposal_number, self.accepted_value
+            self.promised_id = proposal_id
+            return proposal_id, self.accepted_value
 
 
 
@@ -119,15 +121,15 @@ class Acceptor (object):
 class Learner (object):
     
     def __init__(self, quorum_size):
-        self.proposals   = dict() # maps proposal_number => [accept_count, retain_count, value]
-        self.acceptors   = dict() # maps acceptor_uid => last_accepted_proposal_number
+        self.proposals   = dict() # maps proposal_id => [accept_count, retain_count, value]
+        self.acceptors   = dict() # maps acceptor_uid => last_accepted_proposal_id
         self.quorum_size = quorum_size
 
         self.accepted_value = None
         self.complete       = False
 
 
-    def recv_accepted(self, acceptor_uid, proposal_number, accepted_value):
+    def recv_accepted(self, acceptor_uid, proposal_id, accepted_value):
         '''
         Only messages from valid acceptors may result in calling this function.
         '''
@@ -137,10 +139,10 @@ class Learner (object):
         
         last_pn = self.acceptors.get(acceptor_uid)
 
-        if not proposal_number > last_pn:
+        if not proposal_id > last_pn:
             return # Old message
 
-        self.acceptors[ acceptor_uid ] = proposal_number
+        self.acceptors[ acceptor_uid ] = proposal_id
         
         if last_pn is not None:
             oldp = self.proposals[ last_pn ]
@@ -148,10 +150,10 @@ class Learner (object):
             if oldp[1] == 0:
                 del self.proposals[ last_pn ]
 
-        if not proposal_number in self.proposals:
-            self.proposals[ proposal_number ] = [0, 0, accepted_value]
+        if not proposal_id in self.proposals:
+            self.proposals[ proposal_id ] = [0, 0, accepted_value]
 
-        t = self.proposals[ proposal_number ]
+        t = self.proposals[ proposal_id ]
 
         assert accepted_value == t[2], 'Value mismatch for single proposal!'
         
@@ -186,16 +188,16 @@ class Node (object):
     
     # -- Acceptor Methods --
     
-    def recv_prepare(self, proposal_number):
-        self.proposer.observe_proposal( proposal_number )
-        return self.acceptor.recv_prepare( proposal_number )
+    def recv_prepare(self, proposal_id):
+        self.proposer.observe_proposal( proposal_id )
+        return self.acceptor.recv_prepare( proposal_id )
 
     recv_accept_request = property( lambda self: self.acceptor.recv_accept_request )
     
     # -- Learner Methods --
 
-    def recv_accepted(self, acceptor_uid, proposal_number, accepted_value):
-        r = self.learner.recv_accepted( acceptor_uid, proposal_number, accepted_value )
+    def recv_accepted(self, acceptor_uid, proposal_id, accepted_value):
+        r = self.learner.recv_accepted( acceptor_uid, proposal_id, accepted_value )
 
         if self.learner.complete:
             self.on_resolution( self.learner.accepted_value )
