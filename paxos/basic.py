@@ -47,7 +47,7 @@ class Proposer (object):
 
     
 
-    def  observe_proposal(self, proposal_id):
+    def observe_proposal(self, proposal_id):
         '''
         Optional method used to update the proposal counter as proposals are seen on the network.
         When co-located with Acceptors and/or Learners, this method may be used to avoid a message

@@ -44,12 +44,21 @@ class Proposer (basic.Proposer):
         raise NotImplementedError
 
     def schedule(self, msec_delay, func_obj):
-        raise NotImplementedError
+        '''
+        Called by pulse() to schedule the next pulse() call while this node has
+        leadership. If this method is not overridden appropriately, subclasses
+        must use the on_leadership_acquired()/on_leadership_lost() callbacks
+        to ensure that pulse() is called every hb_period while leadership is held.
+        '''
+        pass
 
     def on_leadership_acquired(self):
         pass
 
     def on_leadership_lost(self):
+        pass
+
+    def on_leadership_change(self, prev_leader_uid, new_leader_uid):
         pass
     #------------------------------
     
@@ -75,7 +84,7 @@ class Proposer (basic.Proposer):
 
 
     
-    def poll_liveness(self, now=None):
+    def poll_liveness(self):
         '''
         Should be called every liveness_window
         '''        
@@ -106,6 +115,8 @@ class Proposer (basic.Proposer):
         
         if proposal_id > self.leader_proposal_id:
             # Change of leadership
+            old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
+            
             self.leader_proposal_id = proposal_id
 
             if self.leader and proposal_id[1] != self.proposer_uid:
@@ -113,12 +124,19 @@ class Proposer (basic.Proposer):
                 self.on_leadership_lost()
                 self.observe_proposal( proposal_id )
 
+            self.on_leadership_change( old_leader_uid, proposal_id[1] )
+
+            
+
         if self.leader_proposal_id == proposal_id:
             self._tlast = self.timestamp()
                 
 
             
     def pulse(self):
+        '''
+        Must be called every hb_period while this node is the leader
+        '''
         if self.leader:
             self.recv_heartbeat( self.proposal_id )
             self.send_heartbeat( self.proposal_id )

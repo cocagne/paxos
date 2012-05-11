@@ -60,18 +60,18 @@ class MultiPaxos (object):
     def prepare(self):
         return self.node.prepare()
 
-    def recv_promise(self, instance_num, acceptor_uid, proposal_number, prev_proposal_number, prev_proposal_value):
+    def recv_promise(self, instance_num, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         if instance_num == self.instance_num:
-            return self.node.recv_promise(acceptor_uid, proposal_number, prev_proposal_number, prev_proposal_value)
+            return self.node.recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
 
-    def recv_prepare(self, instance_num, proposal_number):
+    def recv_prepare(self, instance_num, proposal_id):
         if instance_num == self.instance_num:
-            return self.node.recv_prepare(proposal_number)
+            return self.node.recv_prepare(proposal_id)
 
-    def recv_accept_request(self, instance_num, proposal_number, value):
+    def recv_accept_request(self, instance_num, proposal_id, value):
         if instance_num == self.instance_num:
-            return self.node.recv_accept_request(proposal_number, value)
+            return self.node.recv_accept_request(proposal_id, value)
 
-    def recv_accepted(self, instance_num, acceptor_uid, proposal_number, accepted_value):
+    def recv_accepted(self, instance_num, acceptor_uid, proposal_id, accepted_value):
         if instance_num == self.instance_num:
-            return self.node.recv_accepted(acceptor_uid, proposal_number, accepted_value)
+            return self.node.recv_accepted(acceptor_uid, proposal_id, accepted_value)
