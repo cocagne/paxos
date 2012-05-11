@@ -49,6 +49,12 @@ class MultiPaxos (object):
         self._next_instance()
 
 
+    def have_proposed_value(self):
+        return self.node.proposer.value is not None
+
+    def have_leadership(self):
+        return self.node.proposer.leader
+
     # --- basic.Node wrappers ---
 
     def set_proposal(self, instance_num, value):

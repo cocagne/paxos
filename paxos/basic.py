@@ -14,7 +14,7 @@ class Proposer (object):
         self.proposer_uid         = proposer_uid
         self.proposal_id          = None
         self.next_proposal_number = 1
-        self.accepted_id      = None
+        self.accepted_id          = None
         self.replied              = set()
         self.value                = proposed_value
         self.quorum_size          = quorum_size
@@ -89,9 +89,9 @@ class Acceptor (object):
 
     
     def __init__(self):
-        self.promised_id = None
+        self.promised_id     = None
         self.accepted_value  = None
-        self.accepted_id = None
+        self.accepted_id     = None
 
         
     def recv_prepare(self, proposal_id):
