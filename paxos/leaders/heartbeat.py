@@ -16,7 +16,8 @@ class Proposer (basic.Proposer):
     sending out heartbeat messages itself. If a quorum is not received, the
     node will continually resend its proposal every 'liveness_window' until either
     a quorum is established or a heartbeat with a proposal number greater than
-    its own is seen.
+    its own is seen. The units for hb_period and liveness_window is seconds. Floating
+    point values may be used for sub-second precision.
 
     Leadership loss is detected by way of receiving a heartbeat message from a proposer
     with a higher proposal number (which must be obtained through a successful phase 1).
@@ -26,8 +27,8 @@ class Proposer (basic.Proposer):
     safety mechanisms remain intact.
     '''
 
-    hb_period       = 1000
-    liveness_window = 5000
+    hb_period       = 1
+    liveness_window = 5
 
     timestamp       = time.time
 
@@ -87,7 +88,7 @@ class Proposer (basic.Proposer):
     def poll_liveness(self):
         '''
         Should be called every liveness_window
-        '''        
+        '''
         if self._acquiring:
             # XXX Could add a random delay here to reduce the chance of collisions
             self.send_prepare( self._acquiring )
@@ -114,7 +115,9 @@ class Proposer (basic.Proposer):
         leader_proposal_number, node_uid = proposal_id
         
         if proposal_id > self.leader_proposal_id:
-            # Change of leadership
+            # Change of leadership            
+            self._acquiring = None
+            
             old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
             
             self.leader_proposal_id = proposal_id

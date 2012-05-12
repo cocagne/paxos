@@ -66,7 +66,7 @@ class Proposer (object):
         '''
         if proposal_id >= (self.next_proposal_number, self.proposer_uid):
             self.next_proposal_number = proposal_id[0] + 1
-            
+
         if self.leader or proposal_id != self.proposal_id or acceptor_uid in self.replied:
             return
 
@@ -77,7 +77,6 @@ class Proposer (object):
             self.value       = prev_proposal_value
 
         if len(self.replied) == self.quorum_size:
-
             self.leader = True
 
             return self.proposal_id, self.value
@@ -92,18 +91,23 @@ class Acceptor (object):
         self.promised_id     = None
         self.accepted_value  = None
         self.accepted_id     = None
+        self.previous_id     = None            
 
         
     def recv_prepare(self, proposal_id):
         '''
         Returns: None on prepare failed. (proposal_id, promised_id, accepted_value) on success
         '''
+        if proposal_id == self.promised_id:
+            # Duplicate accepted proposal
+            return proposal_id, self.previous_id, self.accepted_value
+        
         if proposal_id > self.promised_id:
-            prev = self.promised_id
+            self.previous_id = self.promised_id
             
             self.promised_id = proposal_id
 
-            return proposal_id, prev, self.accepted_value
+            return proposal_id, self.previous_id, self.accepted_value
 
         
     def recv_accept_request(self, proposal_id, value):
