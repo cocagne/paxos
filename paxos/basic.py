@@ -74,7 +74,8 @@ class Proposer (object):
         
         if prev_proposal_id > self.accepted_id:
             self.accepted_id = prev_proposal_id
-            self.value       = prev_proposal_value
+            if prev_proposal_value is not None:
+                self.value   = prev_proposal_value
 
         if len(self.replied) == self.quorum_size:
             self.leader = True
@@ -129,8 +130,9 @@ class Learner (object):
         self.acceptors   = dict() # maps acceptor_uid => last_accepted_proposal_id
         self.quorum_size = quorum_size
 
-        self.accepted_value = None
-        self.complete       = False
+        self.accepted_value       = None
+        self.accepted_proposal_id = None
+        self.complete             = False
 
 
     def recv_accepted(self, acceptor_uid, proposal_id, accepted_value):
@@ -165,10 +167,11 @@ class Learner (object):
         t[1] += 1
 
         if t[0] == self.quorum_size:
-            self.accepted_value = accepted_value
-            self.proposals      = None
-            self.acceptors      = None
-            self.complete       = True
+            self.accepted_value       = accepted_value
+            self.accepted_proposal_id = proposal_id
+            self.proposals            = None
+            self.acceptors            = None
+            self.complete             = True
 
         return self.accepted_value
             
@@ -204,7 +207,7 @@ class Node (object):
         r = self.learner.recv_accepted( acceptor_uid, proposal_id, accepted_value )
 
         if self.learner.complete:
-            self.on_resolution( self.learner.accepted_value )
+            self.on_resolution( self.learner.accepted_proposal_id, self.learner.accepted_value )
 
         return r
 

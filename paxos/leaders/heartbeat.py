@@ -66,8 +66,9 @@ class Proposer (basic.Proposer):
     def __init__(self, my_uid, quorum_size, proposed_value=None, leader_uid=None,
                  hb_period=None, liveness_window=None):
         super(Proposer, self).__init__(my_uid, quorum_size, proposed_value)
-        
-        self.leader_proposal_id  = None
+
+        self.proposal_id         = (1, self.proposer_uid)
+        self.leader_proposal_id  = (1, leader_uid)
         self._tlast              = self.timestamp()
         self._acquiring          = None # holds proposal id for our leadership request
 
@@ -75,8 +76,7 @@ class Proposer (basic.Proposer):
         if liveness_window: self.liveness_window = liveness_window
 
         if self.proposer_uid == leader_uid:
-            self.leader             = True
-            self.leader_proposal_id = (1, self.proposer_uid)
+            self.leader = True
         
 
         
@@ -161,11 +161,14 @@ class Proposer (basic.Proposer):
         r = super(Proposer, self).recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
 
         if r and self._acquiring:
+            old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
+            
             self.leader_proposal_id = self.proposal_id
             self._acquiring         = None
             self.pulse()
             self.on_leadership_acquired()
-
+            self.on_leadership_change( old_leader_uid, proposal_id[1] )
+            
             # If we have a value to propose, do so.
             if self.value is not None:
                 self.send_accept( self.proposal_id, self.value )

@@ -129,52 +129,52 @@ class LearnerTester (object):
 
 
     def test_one(self):
-        self.assertEquals( self.l.recv_accepted(1, 1, 'foo'), None )
+        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
 
     def test_two(self):
-        self.assertEquals( self.l.recv_accepted(1, 1, 'foo'), None )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'foo'), None )
+        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None )
 
     def test_three(self):
-        self.assertEquals( self.l.recv_accepted(1, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, 1, 'foo'), 'foo' )
+        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
 
     def test_three(self):
-        self.assertEquals( self.l.recv_accepted(1, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, 1, 'foo'), 'foo' )
+        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
 
     def test_duplicates(self):
-        self.assertEquals( self.l.recv_accepted(1, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, 1, 'foo'), 'foo' )
+        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
 
     def test_ignore_one(self):
-        self.assertEquals( self.l.recv_accepted(1, 2, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 2, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, 1, 'bar'), None  )
-        self.assertEquals( self.l.recv_accepted(4, 2, 'foo'), 'foo' )
+        self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'bar'), None  )
+        self.assertEquals( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
 
     def test_ignore_old(self):
-        self.assertEquals( self.l.recv_accepted(1, 2, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 2, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 1, 'bar'), None  )
-        self.assertEquals( self.l.recv_accepted(4, 2, 'foo'), 'foo' )
+        self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'bar'), None  )
+        self.assertEquals( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
 
     def test_override_old(self):
-        self.assertEquals( self.l.recv_accepted(1, 1, 'bar'), None  )
-        self.assertEquals( self.l.recv_accepted(1, 2, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, 2, 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, 2, 'foo'), 'foo' )
+        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'bar'), None  )
+        self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+        self.assertEquals( self.l.recv_accepted(3, (2,'2'), 'foo'), 'foo' )
 
     #def test_ignore_done(self):
-    #    self.assertEquals( self.l.recv_accepted(1, 2, 'foo'), None  )
-    #    self.assertEquals( self.l.recv_accepted(2, 2, 'foo'), None  )
-    #    self.assertEquals( self.l.recv_accepted(3, 2, 'foo'), 'foo' )
-    #    self.assertEquals( self.l.recv_accepted(1, 3, 'foo'), 'foo' )
+    #    self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+    #    self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+    #    self.assertEquals( self.l.recv_accepted(3, (2,'2'), 'foo'), 'foo' )
+    #    self.assertEquals( self.l.recv_accepted(1, (3,'3'), 'foo'), 'foo' )
     
 
 
