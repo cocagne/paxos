@@ -179,8 +179,21 @@ class Learner (object):
 
     
 class Node (object):
+    '''
+    This class supports the common model where each node on a network preforms
+    all three Paxos roles, Proposer, Acceptor, and Learner.
+    '''
 
     def __init__(self, proposer, acceptor, learner, resolution_callback):
+        '''
+        proposer - An object implementing the Proposer API
+        acceptor - An object implementing the Acceptor API
+        learner  - An object implementing the Learner API
+        
+        resolution_callback - Function that will be called when a resolution for
+                              the Paxos instance is determined. The arguments
+                              will be: proposal_id, value
+        '''
         self.proposer      = proposer
         self.acceptor      = acceptor
         self.learner       = learner

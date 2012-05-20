@@ -6,7 +6,7 @@ The DurableObjectHandler class is given an object to durably persist along with
 an object_id that is used to distinguish between multiple durable objects
 persisted to the same directory. Whenever a savepoint is reached in the
 application, the handler's save() method may be used to store the objects state
-to disk. The application and or machine is permitted to fail at any point. If
+to disk. The application or machine is permitted to fail at any point. If
 the failure occurs mid-write, the corruption will be detected by the
 DurableObjectHandler constructor and the previously stored state will be
 loaded.

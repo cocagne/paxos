@@ -17,7 +17,19 @@ def basic_node_factory( proposer_uid, leader_uid, quorum_size, resolution_callba
 
     
 class MultiPaxos (object):
+    '''
+    This class ties a series of individual Paxos instances into a single, logical
+    chain of values. This is done by assigning a sequence number to each
+    instance of the Paxos algorithm and ignoring all function calls which do not
+    match the current sequence number.
 
+    The node_factory class attribute points to a factory function for basic.Node
+    instances. A new Node instance will be created to handle each round of the
+    Paxos algorithm. The purpose for the factory function is to allow custom
+    extensions to the basic Paxos implementations of Proposer, Acceptor, and
+    Learner. 
+    '''
+    
     node_factory = basic_node_factory
     
     def __init__(self, node_uid, quorum_size, instance_num=1 ):
@@ -41,7 +53,9 @@ class MultiPaxos (object):
 
 
     def on_proposal_resolution(self, instance_num, value):
-        pass
+        '''
+        Called when a value for the current Paxos instance is chosend
+        '''
 
     
     def set_instance_number(self, instance_number):
