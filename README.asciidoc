@@ -1,0 +1,94 @@
+Plain Paxos 
+===========
+Tom Cocagne <tom.cocange@gmail.com>
+v1.0, May 2012
+
+
+Overview
+--------
+
+This repository contains a basic implementation of the core Paxos algorithm. The
+distinguishing characteristic of this implementation, as compared to other
+freely available open-source implementations, is that this library is completely
+agnostic of application domains and networking infrastructures. Whereas most
+Paxos implementations are deeply and inextricably embedded within 
+application-specific logic, this implementation focuses purely on the Paxos
+algorithm and supporting utilities to enhance the algorithm's use in practical 
+environments.
+
+The goal of this implementation is to provide an algorithmically correct Paxos
+implementation that may be used to provide strong consistency guarantees for
+any networked application. Additionally, the tight focus of this implementation
+provides an excellent basis for Paxos newcomers to learn about and experiment
+with distributed consistency.
+
+
+Implementation
+--------------
+
+The initial implementation language for this library is Python. However, it is
+hoped that, should this libary prove useful to the open-source community,
+implementations in additional languages will be added over time.
+
+basic.py
+~~~~~~~~
+
+This module contains a Python class for each of the three basic roles in Paxos:
+Proposer, Acceptor, & Learner. Additionally, it contains an aggregation class
+to compose Proposer, Acceptor, and Learner instances into a single, logical 'Node'
+class that fullfills the functions of all three roles.
+
+This module provides a straight-forward implementation of the Paxos algorithm.
+However, there are two implementation-specific items of note. First is that
+each logical entity must be assigned a unique identifier (though this unique id
+may be shared between the three roles associted with a particular node on the
+network). Although this is implied by the description of the Paxos algorithm,
+it is not stated explicitly. Also, "proposal numbers" in this implementation
+are better described as proposal 'IDs'. Rather than an integer number, this
+implementation uses a tuple of +(number,node_uid)+. The driving purpose for
+this change is to prevent two Proposers from independently choosing the same
+proposal number and attempting to reach concensus with it. The addition of the
+node UID to the numeric proposal number ensures that a Proposer can never
+confuse an acceptance for the 'promise' message of another node as a 'promise'
+message for itself. The ordering characteristics for the tuples of
++(proposal_number, node_uid)+ are assumed to match those of the Python
+interpreter.
+
+multi.py
+~~~~~~~~
+
+This module provides a class that converts the single-value-only nature of the
+basic Paxos algorithm into a continual stream of value resolutions which is
+commonly known as Multi-Paxos. Most practical implementations of Paxos use a
+variation on the theme of Multi-Paxos.
+
+durable.py
+~~~~~~~~~~
+
+Correct implementations of the Paxos algorithm require saving the algorithm's
+current state to persistent media prior to sending each message over the 
+network. This is necessary to ensure that promises made to external entities
+will never be reneged upon should the application crash and recover at an
+inopportune time. This module implements a very simple mechanism for efficiently
+saving application state to disk.
+
+proposers
+~~~~~~~~~
+
+This is a package that contains useable, real-world implementations of Paxos
+proposers. The Paxos algorithm states that when certain failures occur,
+retransmissions are required to ensure progress. However, it fails to describe
+the details of how these retransmissions or other progression-ensuring actions
+should occur. There are likely an infinite number of correct and useful
+Proposer implementations that both fulfill the basic Paxos requirements while
+simultaneously ensuring efficient forward progress. Initially, this module
+contains only a single, practical, heartbeat-based implementation. It is hoped
+that other, additional modules will be added as the community develops them.
+
+Testing
+-------
+
+As this library serves to provide correctness guarantees to higher-level consumers,
+this library's testing must be comprehensive and exhaustive. The +test+
+directory of the root source code repository contains the unittest files used to
+excersise the implementation. 

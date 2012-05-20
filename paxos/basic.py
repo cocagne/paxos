@@ -6,6 +6,12 @@ timeouts, retransmit, liveness-detectors, etc.
 
 Instances of these classes are intended for a single instance of the algorithm
 only.
+
+As this is an algorithm-only implementation that has no notion of "message
+passing", the return values of the function are used in place of message
+passing. Whenever a function returns None, it indicates that no messages
+should be sent. Otherwise, the next message in the Paxos sequence must be
+sent with the contents of the return value.
 '''
 
 class Proposer (object):
