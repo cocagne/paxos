@@ -1,7 +1,8 @@
 import sys
 import os.path
 
-from twisted.trial import unittest
+#from twisted.trial import unittest
+import unittest
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append( os.path.dirname(this_dir) )
