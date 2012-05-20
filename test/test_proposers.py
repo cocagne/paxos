@@ -8,7 +8,7 @@ from twisted.trial import unittest
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append( os.path.dirname(this_dir) )
 
-from paxos.leaders import heartbeat
+from paxos.proposers import heartbeat
 
 
 PVALUE = 99 # arbitrary value for proposal
