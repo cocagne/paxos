@@ -113,7 +113,6 @@ class Acceptor (object):
             self.previous_id = self.promised_id
             
             self.promised_id = proposal_id
-
             return proposal_id, self.previous_id, self.accepted_value
 
         

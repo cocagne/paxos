@@ -160,7 +160,7 @@ class Proposer (basic.Proposer):
     def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         r = super(Proposer, self).recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
 
-        if r and self._acquiring:
+        if r:
             old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
             
             self.leader_proposal_id = self.proposal_id
@@ -177,12 +177,7 @@ class Proposer (basic.Proposer):
 
 
     
-    def recv_proposal_rejected(self, acceptor_uid, proposal_id):
-        if proposal_id > self._acquiring:
-            self._acquiring = None
-
-        
-
-    
-        
+    #def recv_proposal_rejected(self, acceptor_uid, proposal_id):
+    #    if proposal_id > self._acquiring:
+    #        self._acquiring = None
         
