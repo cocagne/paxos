@@ -21,6 +21,7 @@ class Proposer (basic.Proposer):
 
     Leadership loss is detected by way of receiving a heartbeat message from a proposer
     with a higher proposal number (which must be obtained through a successful phase 1).
+    Or by receiving a quorum of NACK responses to Accept! messages.
 
     This process does not modify the basic Paxos algorithm in any way, it merely seeks
     to ensure recovery from failures in leadership. Consequently, the basic Paxos
@@ -71,12 +72,19 @@ class Proposer (basic.Proposer):
         self.leader_proposal_id  = (1, leader_uid)
         self._tlast              = self.timestamp()
         self._acquiring          = None # holds proposal id for our leadership request
+        self._nacks              = set()
 
         if hb_period:       self.hb_period       = hb_period
         if liveness_window: self.liveness_window = liveness_window
 
         if self.proposer_uid == leader_uid:
             self.leader = True
+
+
+            
+    def prepare(self):
+        self._nacks.clear()
+        return super(Proposer, self).prepare()
         
 
         
@@ -90,7 +98,6 @@ class Proposer (basic.Proposer):
         Should be called every liveness_window
         '''
         if self._acquiring:
-            # XXX Could add a random delay here to reduce the chance of collisions
             self.send_prepare( self._acquiring )
             
         elif not self.leader_is_alive():
@@ -174,6 +181,20 @@ class Proposer (basic.Proposer):
                 self.send_accept( self.proposal_id, self.value )
 
         return r
+
+
+    def recv_accept_nack(self, acceptor_uid, proposal_id, new_proposal_id):
+        if proposal_id == self.proposal_id:
+            #print 'NACK ', self.proposer_uid[-5], acceptor_uid[-5], proposal_id, new_proposal_id
+            self._nacks.add(acceptor_uid)
+
+        
+        if self.leader and len(self._nacks) >= self.quorum_size:
+            #print '******* REBELLION **********', self.proposer_uid
+            self.leader_proposal_id = None
+            self.on_leadership_lost()
+            self.on_leadership_change(self.proposer_uid, None)
+            self.observe_proposal( new_proposal_id )
 
 
     

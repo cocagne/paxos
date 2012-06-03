@@ -155,7 +155,7 @@ class HeartbeatProposerTester (unittest.TestCase):
         self.assertEquals(self.l.recv_promise(2, (1,'uid'), None, None), None)
         self.assertEquals(self.l.recv_promise(3, (1,'uid'), None, None), None)
 
-        self.l.recv_proposal_rejected((2,'other'), 0)
+        #self.l.recv_proposal_rejected((2,'other'), 0)
         
         self.assertEquals(self.l.recv_promise(4, (1,'uid'), None, None), ((1,'uid'), PVALUE))
 
@@ -170,6 +170,25 @@ class HeartbeatProposerTester (unittest.TestCase):
         self.l.recv_heartbeat( (5,'other') )
 
         self.assertEquals( self.l.leader_proposal_id, (5,'other') )
+        self.assertEquals( self.l.tleader, 'lost' )
+
+
+    def test_lose_leader_via_nacks(self):
+        self.test_gain_leader()
+
+        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+        
+        self.l.recv_accept_nack( 2, (1,'uid'), (7,'foo') )
+
+        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+
+        self.l.recv_accept_nack( 3, (1,'uid'), (7,'foo') )
+
+        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+
+        self.l.recv_accept_nack( 4, (1,'uid'), (7,'foo') )
+
+        self.assertEquals( self.l.leader_proposal_id, None )
         self.assertEquals( self.l.tleader, 'lost' )
 
 
