@@ -75,7 +75,7 @@ class Proposer (object):
 
         if self.leader or proposal_id != self.proposal_id or acceptor_uid in self.replied:
             return
-
+        
         self.replied.add( acceptor_uid )
         
         if prev_proposal_id > self.accepted_id:
@@ -110,8 +110,7 @@ class Acceptor (object):
             return proposal_id, self.previous_id, self.accepted_value
         
         if proposal_id > self.promised_id:
-            self.previous_id = self.promised_id
-            
+            self.previous_id = self.promised_id            
             self.promised_id = proposal_id
             return proposal_id, self.previous_id, self.accepted_value
 
@@ -124,7 +123,8 @@ class Acceptor (object):
             self.accepted_value  = value
             self.promised_id = proposal_id
             return proposal_id, self.accepted_value
-
+        else:
+            print 'Prop ID:', proposal_id, 'Promised ID:', self.promised_id
 
 
         
