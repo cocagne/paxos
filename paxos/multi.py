@@ -46,6 +46,8 @@ class MultiPaxos (object):
                 self.instance_num = d['instance_num']
                 self.node         = d['node']
 
+                self.node.set_on_resolution_callback( self._on_resolution )
+
                 self.onDurableRecover(d)
             
 
@@ -57,6 +59,8 @@ class MultiPaxos (object):
         self.node         = None
 
         self._next_instance()
+
+        self._save_durable_state()
 
         
     def getDurableState(self):
@@ -70,9 +74,9 @@ class MultiPaxos (object):
     def _save_durable_state(self):
         if self.durable:
             d = dict( uid          = self.uid,
-                      quorum_size  = quorum_size,
-                      instance_num = instance_num,
-                      node         = node )
+                      quorum_size  = self.quorum_size,
+                      instance_num = self.instance_num,
+                      node         = self.node )
             d.update( self.getDurableState() )
             self.durable.save( d )
 
@@ -115,7 +119,9 @@ class MultiPaxos (object):
         return self.node.set_proposal( value )
             
     def prepare(self):
-        return self.node.prepare()
+        r = self.node.prepare()
+        self._save_durable_state()
+        return r
 
     def recv_promise(self, instance_num, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         if instance_num == self.instance_num:

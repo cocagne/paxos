@@ -75,7 +75,7 @@ class Proposer (object):
 
         if self.leader or proposal_id != self.proposal_id or acceptor_uid in self.replied:
             return
-        
+
         self.replied.add( acceptor_uid )
         
         if prev_proposal_id > self.accepted_id:
@@ -105,6 +105,7 @@ class Acceptor (object):
         '''
         Returns: None on prepare failed. (proposal_id, promised_id, accepted_value) on success
         '''
+        
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
             return proposal_id, self.previous_id, self.accepted_value

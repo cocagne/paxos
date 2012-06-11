@@ -1,5 +1,7 @@
 import sys
 import os.path
+import tempfile
+import shutil
 
 #from twisted.trial import unittest
 import unittest
@@ -124,4 +126,55 @@ class MultiTester (unittest.TestCase):
         m.recv_accepted(inum, 3, pnum, pval)
 
         self.assertEquals( m.instance_num, 3 )
+
+
+
+class MultiDurabilityTester (unittest.TestCase):
+
+    def setUp(self):
+        self.tdir = tempfile.mkdtemp()
+        self.m    = multi.MultiPaxos(self.tdir, 'foo')
+        self.m.initialize(1, 3)
+
+    def tearDown(self):
+        shutil.rmtree(self.tdir)
+
+
+    def test_durability(self):
+        m = multi.MultiPaxos(self.tdir, 'foo')
         
+        pnum = m.prepare()
+        pval = 2
+        inum = m.instance_num
+
+        m.set_proposal(inum, pval)
+        
+        m.recv_prepare(inum, pnum)
+
+        # crash & recover 
+        m = multi.MultiPaxos(self.tdir, 'foo')     
+
+        m.recv_promise(inum, 1, pnum, None, None)
+        m.recv_promise(inum, 2, pnum, None, None) 
+        m.recv_promise(inum, 3, pnum, None, None)
+
+        # crash & recover 
+        m = multi.MultiPaxos(self.tdir, 'foo')
+
+        self.assertTrue( m.node.proposer.leader )
+
+        self.assertEquals(m.recv_accept_request(inum, pnum, pval), (pnum, pval))
+
+        m.recv_accepted(inum, 1, pnum, pval)
+        m.recv_accepted(inum, 2, pnum, pval)
+        
+        self.assertEquals( m.instance_num, 1 )
+        
+        m.recv_accepted(inum, 3, pnum, pval)
+
+        # crash & recover 
+        m = multi.MultiPaxos(self.tdir, 'foo')
+
+        self.assertEquals( m.instance_num, 2 )
+
+
