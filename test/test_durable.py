@@ -101,43 +101,40 @@ class DurableObjectHandlerTester (unittest.TestCase):
     def test_no_save(self):
         self.doh.close()
         d = self.newdoh('id1')
-        self.assertEquals(d.durable_object, None)
+        self.assertEquals(d.recovered, None)
         self.assertEquals(d.serial, 1)
 
     def test_one_save(self):
-        self.doh.set_durable_object(self.o)
-        self.doh.save()
+        self.doh.save(self.o)
         self.doh.close()
         d = self.newdoh('id1')
         self.assertTrue( os.stat(self.doh.fn_a).st_size > 0 )
         self.assertTrue( os.stat(self.doh.fn_b).st_size == 0 )
-        self.assertTrue( isinstance(self.doh.durable_object, DObj) )
-        self.assertEquals(d.durable_object.state, 'initial')
+        self.assertTrue( isinstance(d.recovered, DObj) )
+        self.assertEquals(d.recovered.state, 'initial')
 
 
     def test_two_save(self):
-        self.doh.set_durable_object(self.o)
-        self.doh.save()
+        self.doh.save(self.o)
         self.o.state = 'second'
-        self.doh.save()
+        self.doh.save(self.o)
         self.doh.close()
         d = self.newdoh('id1')
         self.assertTrue( os.stat(self.doh.fn_a).st_size > 0 )
         self.assertTrue( os.stat(self.doh.fn_b).st_size > 0 )
-        self.assertTrue( isinstance(self.doh.durable_object, DObj) )
-        self.assertEquals(d.durable_object.state, 'second')
+        self.assertTrue( isinstance(d.recovered, DObj) )
+        self.assertEquals(d.recovered.state, 'second')
 
     def test_three_save(self):
-        self.doh.set_durable_object(self.o)
-        self.doh.save()
+        self.doh.save(self.o)
         self.o.state = 'second'
-        self.doh.save()
+        self.doh.save(self.o)
         self.o.state = 'third'
-        self.doh.save()
+        self.doh.save(self.o)
         self.doh.close()
         d = self.newdoh('id1')
-        self.assertTrue( isinstance(self.doh.durable_object, DObj) )
-        self.assertEquals(d.durable_object.state, 'third')
+        self.assertTrue( isinstance(d.recovered, DObj) )
+        self.assertEquals(d.recovered.state, 'third')
 
         
     def test_new_object_corrupted(self):
@@ -148,8 +145,8 @@ class DurableObjectHandlerTester (unittest.TestCase):
             f.flush()
             
         d = self.newdoh('id1')
-        self.assertTrue( isinstance(d.durable_object, DObj) )
-        self.assertEquals(d.durable_object.state, 'initial')
+        self.assertTrue( isinstance(d.recovered, DObj) )
+        self.assertEquals(d.recovered.state, 'initial')
 
         
     def test_old_object_corrupted(self):
@@ -160,8 +157,8 @@ class DurableObjectHandlerTester (unittest.TestCase):
             f.flush()
             
         d = self.newdoh('id1')
-        self.assertTrue( isinstance(d.durable_object, DObj) )
-        self.assertEquals(d.durable_object.state, 'second')
+        self.assertTrue( isinstance(d.recovered, DObj) )
+        self.assertEquals(d.recovered.state, 'second')
 
 
     def test_unrecoverable_corruption(self):

@@ -156,6 +156,11 @@ class DurableObjectHandler (object):
             os.fsync(fdd)
             os.close(fdd)
 
+        self.recover()
+
+
+    def recover(self):
+
         sa, sb, obja, objb = (None, None, None, None)
             
         try:
@@ -175,16 +180,18 @@ class DurableObjectHandler (object):
                 
         if s is None:
             if os.stat(self.fn_a).st_size == 0 and os.stat(self.fn_b).st_size == 0:
-                self.serial         = 1
-                self.fd_next        = self.fd_a
-                self.durable_object = None
+                self.serial    = 1
+                self.fd_next   = self.fd_a
+                self.recovered = None
             else:
                 raise UnrecoverableFailure('Unrecoverable Durability failure')
             
         else:
-            self.serial         = s + 1
-            self.fd_next        = fd
-            self.durable_object = obj
+            self.serial    = s + 1
+            self.fd_next   = fd
+            self.recovered = obj
+
+        return self.recovered
 
 
     def close(self):
@@ -195,17 +202,14 @@ class DurableObjectHandler (object):
             self.fd_b = None
 
             
-    def set_durable_object(self, dobj):
-        self.durable_object = dobj
-
-    
-    def save(self):
+    def save(self, obj):
         serial = self.serial
         fd     = self.fd_next
-    
+        
         self.serial += 1
         self.fd_next = self.fd_a if self.fd_next == self.fd_b else self.fd_b
+        self.recovered = None
     
-        write( fd, serial, self.durable_object )
+        write( fd, serial, obj )
 
         

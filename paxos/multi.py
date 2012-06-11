@@ -1,5 +1,5 @@
 
-from paxos import basic
+from paxos import basic, durable
 
 
 class InvalidInstanceNumber (Exception):
@@ -31,14 +31,50 @@ class MultiPaxos (object):
     '''
     
     node_factory = basic_node_factory
-    
-    def __init__(self, node_uid, quorum_size, instance_num=1 ):
+
+    def __init__(self, durable_dir=None, object_id=None):
+        self.durable = None
+        
+        if durable_dir:
+            self.durable = durable.DurableObjectHandler( durable_dir, object_id )
+            
+            if self.durable.serial != 1:
+                d = self.durable.recovered
+                
+                self.uid          = d['uid']
+                self.quorum_size  = d['quorum_size']
+                self.instance_num = d['instance_num']
+                self.node         = d['node']
+
+                self.onDurableRecover(d)
+            
+
+    def initialize(self, node_uid, quorum_size, instance_num=1):
+                     
         self.uid          = node_uid
         self.quorum_size  = quorum_size
         self.instance_num = instance_num - 1
         self.node         = None
 
         self._next_instance()
+
+        
+    def getDurableState(self):
+        return {}
+
+    
+    def onDurableRecover(self, state):
+        pass
+
+    
+    def _save_durable_state(self):
+        if self.durable:
+            d = dict( uid          = self.uid,
+                      quorum_size  = quorum_size,
+                      instance_num = instance_num,
+                      node         = node )
+            d.update( self.getDurableState() )
+            self.durable.save( d )
 
         
     def _next_instance(self, leader_uid = None):
@@ -49,6 +85,7 @@ class MultiPaxos (object):
     def _on_resolution(self, proposal_id, value):
         inum = self.instance_num
         self._next_instance( proposal_id[1] )
+        self._save_durable_state()
         self.on_proposal_resolution(inum, value)
 
 
@@ -82,15 +119,24 @@ class MultiPaxos (object):
 
     def recv_promise(self, instance_num, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         if instance_num == self.instance_num:
-            return self.node.recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
+            r = self.node.recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
+            if r:
+                self._save_durable_state()
+            return r
 
     def recv_prepare(self, instance_num, proposal_id):
         if instance_num == self.instance_num:
-            return self.node.recv_prepare(proposal_id)
+            r = self.node.recv_prepare(proposal_id)
+            if r:
+                self._save_durable_state()
+            return r
 
     def recv_accept_request(self, instance_num, proposal_id, value):
         if instance_num == self.instance_num:
-            return self.node.recv_accept_request(proposal_id, value)
+            r = self.node.recv_accept_request(proposal_id, value)
+            if r:
+                self._save_durable_state()
+            return r
 
     def recv_accepted(self, instance_num, acceptor_uid, proposal_id, accepted_value):
         if instance_num == self.instance_num:

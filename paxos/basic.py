@@ -123,8 +123,7 @@ class Acceptor (object):
             self.accepted_value  = value
             self.promised_id = proposal_id
             return proposal_id, self.accepted_value
-        else:
-            print 'Prop ID:', proposal_id, 'Promised ID:', self.promised_id
+        
 
 
         
@@ -203,6 +202,29 @@ class Node (object):
         self.acceptor      = acceptor
         self.learner       = learner
         self.on_resolution = resolution_callback
+
+    # -- Pickle Protocol --
+
+    def set_on_resolution_callback(self, cb_func):
+        '''
+        Required after unpickling a Node object to re-establish the
+        resolution callback handler
+        '''
+        self.on_resolution = cb_func
+
+        
+    def __getstate__(self):
+        # 'on_resolution' may be a bound method which isn't pickleable.
+        # consequently, we ignore this attribute and leave it up to the
+        # user to use 'set_on_resolution_callback' after unpickling
+        return dict( proposer = self.proposer,
+                     acceptor = self.acceptor,
+                     learner  = self.learner )
+
+    def __setstate__(self, d):
+        self.proposer = d['proposer']
+        self.acceptor = d['acceptor']
+        self.learner  = d['learner' ]
 
     # -- Proposer Methods --
         

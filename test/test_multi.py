@@ -13,7 +13,10 @@ import test_basic
 
 class MultiToBasic ( multi.MultiPaxos ):
     def __init__(self, proposer_uid='uid', quorum_size=3, proposed_value=None):
-        super(MultiToBasic, self).__init__(proposer_uid, quorum_size)
+        super(MultiToBasic, self).__init__()
+
+        self.initialize(proposer_uid, quorum_size)
+        
         if proposed_value is not None:
             self.node.set_proposal(proposed_value)
 
@@ -49,10 +52,12 @@ class MultiLearnerTest(test_basic.LearnerTester, unittest.TestCase):
 class MultiTester (unittest.TestCase):
 
     def setUp(self):
-        self.m = multi.MultiPaxos(1, 3)
+        self.m = multi.MultiPaxos()
+        self.m.initialize(1, 3)
 
     def test_simple(self):
-        m = multi.MultiPaxos(1, 3)
+        m = multi.MultiPaxos()
+        m.initialize(1, 3)
         
         pnum = m.prepare()
         pval = 2
@@ -81,7 +86,8 @@ class MultiTester (unittest.TestCase):
 
 
     def test_ignore_previous_messages(self):
-        m    = multi.MultiPaxos(1, 3, 2)
+        m    = multi.MultiPaxos()
+        m.initialize(1, 3, 2)
         pnum = m.prepare()
         pval = 2
         inum = m.instance_num
