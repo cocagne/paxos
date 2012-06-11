@@ -33,7 +33,11 @@ class MultiPaxos (object):
     node_factory = basic_node_factory
 
     def __init__(self, durable_dir=None, object_id=None):
-        self.durable = None
+        self.durable      = None
+        self.uid          = None
+        self.quorum_size  = None
+        self.instance_num = None
+        self.node         = None
         
         if durable_dir:
             self.durable = durable.DurableObjectHandler( durable_dir, object_id )
