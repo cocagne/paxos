@@ -55,7 +55,7 @@ class MultiPaxos (object):
                 self.onDurableRecover(d)
             
 
-    def initialize(self, node_uid, quorum_size, instance_num=1):
+    def initialize(self, node_uid, quorum_size, instance_num=0):
                      
         self.uid          = node_uid
         self.quorum_size  = quorum_size

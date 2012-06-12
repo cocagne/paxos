@@ -17,7 +17,7 @@ class MultiToBasic ( multi.MultiPaxos ):
     def __init__(self, proposer_uid='uid', quorum_size=3, proposed_value=None):
         super(MultiToBasic, self).__init__()
 
-        self.initialize(proposer_uid, quorum_size)
+        self.initialize(proposer_uid, quorum_size, 1)
         
         if proposed_value is not None:
             self.node.set_proposal(proposed_value)
@@ -55,11 +55,11 @@ class MultiTester (unittest.TestCase):
 
     def setUp(self):
         self.m = multi.MultiPaxos()
-        self.m.initialize(1, 3)
+        self.m.initialize(1, 3, 1)
 
     def test_simple(self):
         m = multi.MultiPaxos()
-        m.initialize(1, 3)
+        m.initialize(1, 3, 1)
         
         pnum = m.prepare()
         pval = 2
@@ -134,7 +134,7 @@ class MultiDurabilityTester (unittest.TestCase):
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         self.m    = multi.MultiPaxos(self.tdir, 'foo')
-        self.m.initialize(1, 3)
+        self.m.initialize(1, 3, 1)
 
     def tearDown(self):
         shutil.rmtree(self.tdir)
