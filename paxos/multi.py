@@ -108,6 +108,11 @@ class MultiPaxos (object):
         self._next_instance()
 
 
+    def change_quorum_size(self, new_quorum_size):
+        self.quorum_size = new_quorum_size
+        self._save_durable_state()
+        
+
     def have_proposed_value(self):
         return self.node.proposer.value is not None
 
