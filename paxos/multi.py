@@ -110,6 +110,7 @@ class MultiPaxos (object):
 
     def change_quorum_size(self, new_quorum_size):
         self.quorum_size = new_quorum_size
+        self.node.change_quorum_size(new_quorum_size)
         self._save_durable_state()
         
 

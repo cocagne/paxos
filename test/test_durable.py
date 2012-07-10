@@ -28,7 +28,8 @@ class DurableReadTester (unittest.TestCase):
 
     
     def setUp(self):
-        self.tdir   = tempfile.mkdtemp()
+        tmpfs_dir = '/dev/shm' if os.path.exists('/dev/shm') else None
+        self.tdir   = tempfile.mkdtemp(dir=tmpfs_dir)
         self.fds    = list()
 
         
@@ -78,8 +79,9 @@ class DurableObjectHandlerTester (unittest.TestCase):
 
     
     def setUp(self):
+        tmpfs_dir = '/dev/shm' if os.path.exists('/dev/shm') else None
         self.o      = DObj()
-        self.tdir   = tempfile.mkdtemp()
+        self.tdir   = tempfile.mkdtemp(dir=tmpfs_dir)
         self.doh    = durable.DurableObjectHandler(self.tdir, 'id1')
 
         self.dohs   = [self.doh,]

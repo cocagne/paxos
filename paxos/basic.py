@@ -204,6 +204,11 @@ class Node (object):
         self.learner       = learner
         self.on_resolution = resolution_callback
 
+
+    def change_quorum_size(self, quorum_size):
+        self.proposer.quorum_size = quorum_size
+        self.learner.quorum_size  = quorum_size
+
     # -- Pickle Protocol --
 
     def set_on_resolution_callback(self, cb_func):
