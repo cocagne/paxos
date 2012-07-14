@@ -81,6 +81,12 @@ class Proposer (basic.Proposer):
             self.leader = True
 
 
+    def on_recover(self):
+        '''
+        Must be called after the instance has been recovered from durable state
+        '''
+        self.leader_proposal_id = (0,None)
+
             
     def prepare(self):
         self._nacks.clear()
@@ -120,7 +126,7 @@ class Proposer (basic.Proposer):
             
     def recv_heartbeat(self, proposal_id):
         leader_proposal_number, node_uid = proposal_id
-        
+
         if proposal_id > self.leader_proposal_id:
             # Change of leadership            
             self._acquiring = None
@@ -134,9 +140,7 @@ class Proposer (basic.Proposer):
                 self.on_leadership_lost()
                 self.observe_proposal( proposal_id )
 
-            self.on_leadership_change( old_leader_uid, proposal_id[1] )
-
-            
+            self.on_leadership_change( old_leader_uid, proposal_id[1] )            
 
         if self.leader_proposal_id == proposal_id:
             self._tlast = self.timestamp()
