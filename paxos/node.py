@@ -71,6 +71,7 @@ class Proposer (object):
 
     proposed_value       = None
     proposal_id          = None
+    last_accepted_id     = None
     next_proposal_number = 1
     promises_rcvd        = None
     leader               = False
@@ -156,7 +157,6 @@ class Acceptor (object):
         '''
         Returns: None on prepare failed. (proposal_id, promised_id, accepted_value) on success
         '''
-        
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
             self.messenger.send_promise(self, proposal_id, self.previous_id, self.accepted_value)
@@ -281,5 +281,5 @@ class PaxosNode (Proposer, Acceptor, Learner):
         
     def recv_prepare(self, proposal_id):
         self.observe_proposal( proposal_id )
-        super(PaxosNode,self).recv_prepare( proposal_id )
+        return super(PaxosNode,self).recv_prepare( proposal_id )
     

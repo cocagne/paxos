@@ -54,8 +54,9 @@ class MTester (object):
     def setUp(self):
         self.messenger = TMessenger()
         
-    def ae( attr_name, expected ):
+    def ae(self, attr_name, expected):
         self.assertEquals( getattr(self.messenger, attr_name), expected )
+        setattr(self.messenger, attr_name, None)
 
 
 class ProposerTester (MTester):
@@ -95,140 +96,185 @@ class ProposerTester (MTester):
 
     def test_promise_ignore(self):
         self.p.prepare()
-        self.assertEquals( self.p.recv_promise( 'a', (1,'uid'), None, None ), None )
-        self.assertEquals( self.p.recv_promise( 'b', (1,'uid'), None, None ), None )
-        self.assertEquals( self.p.recv_promise( 'c', (2,'uid'), None, None ), None )
+        self.p.recv_promise( 'a', (1,'uid'), None, None )
+        self.ae('accept', None)
+        self.p.recv_promise( 'b', (1,'uid'), None, None )
+        self.ae('accept', None)
+        self.p.recv_promise( 'c', (2,'uid'), None, None )
+        self.ae('accept', None)
 
     def test_promise_single(self):
         self.p.prepare()
         self.p.prepare()
-        self.assertEquals( self.p.recv_promise( 'a', (2,'uid'), None, None ), None )
-        self.assertEquals( self.p.recv_promise( 'b', (2,'uid'), 1,    'bar'), None )
-        self.assertEquals( self.p.recv_promise( 'c', (2,'uid'), None, None ), ((2,'uid'), 'bar') )
+        self.p.recv_promise( 'a', (2,'uid'), None, None )
+        self.ae('accept', None)
+        self.p.recv_promise( 'b', (2,'uid'), 1,    'bar')
+        self.ae('accept', None)
+        self.p.recv_promise( 'c', (2,'uid'), None, None )
+        self.ae('accept', ((2,'uid'), 'bar'))
 
     def test_promise_multi(self):
         self.p.recv_promise( 'a', (5,'other'), None, None )
         self.p.prepare()
-        self.assertEquals( self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' ), None )
-        self.assertEquals( self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' ), None )
-        self.assertEquals( self.p.recv_promise( 'c', (6,'uid'), 2, 'def' ), ((6,'uid'), 'bar') )
+        self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'c', (6,'uid'), 2, 'def' )
+        self.ae('accept', ((6,'uid'), 'bar') )
 
     def test_promise_duplicate(self):
         self.p.recv_promise( 'a', (5,'other'), None, None )
         self.p.prepare()
-        self.assertEquals( self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' ), None )
-        self.assertEquals( self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' ), None )
-        self.assertEquals( self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' ), None )
-        self.assertEquals( self.p.recv_promise( 'c', (6,'uid'), 2, 'def' ), ((6,'uid'), 'bar') )
+        self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'c', (6,'uid'), 2, 'def' )
+        self.ae('accept', ((6,'uid'), 'bar') )
 
     def test_promise_old(self):
         self.p.recv_promise( 'a', (5,'other'), None, None )
         self.p.prepare()
-        self.assertEquals( self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' ), None )
-        self.assertEquals( self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' ), None )
-        self.assertEquals( self.p.recv_promise( 'c', (5,'other'), 4, 'baz' ), None )
-        self.assertEquals( self.p.recv_promise( 'd', (6,'uid'), 2, 'def' ), ((6,'uid'), 'bar') )
+        self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'c', (5,'other'), 4, 'baz' )
+        self.ae('accept', None )
+        self.p.recv_promise( 'd', (6,'uid'), 2, 'def' )
+        self.ae('accept', ((6,'uid'), 'bar') )
 
 
 
-class AcceptorTester (object):
+class AcceptorTester (MTester):
 
     Klass = None
 
     def setUp(self):
-        self.a = self.Klass()
+        super(AcceptorTester, self).setUp()
+        self.a = self.Klass(self.messenger, 'uid', 3)
 
+    def p(self, x):
+        self.ae('promise', x)
+
+    def r(self, x):
+        self.ae('accepted', x)
 
     def test_first(self):
-        self.assertEquals( self.a.recv_prepare(1), (1, None,None) )
+        self.a.recv_prepare(1)
+        self.p( (1, None,None) )
+        
 
     def test_no_value_two(self):
         self.a.recv_prepare(1)
-        self.assertEquals( self.a.recv_prepare(2), (2, 1, None) )
+        self.a.recv_prepare(2)
+        self.p( (2, 1, None) )
 
     def test_no_value_ignore_old(self):
         self.a.recv_prepare(2)
-        self.assertEquals( self.a.recv_prepare(1), None )
+        self.p( (2, None, None) )
+        self.a.recv_prepare(1)
+        self.p( None )
 
     def test_value_two(self):
         self.a.recv_prepare(1)
+        self.p( (1, None, None) )
         self.a.recv_accept_request(1, 'foo')
-        self.assertEquals( self.a.recv_prepare(2), (2, 1, 'foo') )
+        self.a.recv_prepare(2)
+        self.p( (2, 1, 'foo') )
+        self.r( (1, 'foo') )
 
     def test_value_ignore_old(self):
         self.a.recv_prepare(2)
+        self.p( (2, None, None) )
         self.a.recv_accept_request(2, 'foo')
-        self.assertEquals( self.a.recv_prepare(1), None )
+        self.r( (2, 'foo') )
+        self.a.recv_prepare(1)
+        self.p( None )
+        self.r( None )
 
     def test_prepared_accept(self):
         self.a.recv_prepare(1)
-        self.assertEquals(self.a.recv_accept_request(1, 'foo'), (1,'foo'))
+        self.a.recv_accept_request(1, 'foo')
+        self.r( (1,'foo'))
 
     def test_unprepared_accept(self):
-        self.assertEquals(self.a.recv_accept_request(1, 'foo'), (1,'foo'))
+        self.a.recv_accept_request(1, 'foo')
+        self.r( (1,'foo'))
 
     def test_ignored_accept(self):
         self.a.recv_prepare(5)
-        self.assertEquals(self.a.recv_accept_request(1, 'foo'), None)
+        self.a.recv_accept_request(1, 'foo')
+        self.r(None)
 
     def test_duplicate_accept(self):
-        self.assertEquals(self.a.recv_accept_request(1, 'foo'), (1,'foo'))
-        self.assertEquals(self.a.recv_accept_request(1, 'foo'), (1,'foo'))
+        self.a.recv_accept_request(1, 'foo')
+        self.r((1,'foo'))
+        self.a.recv_accept_request(1, 'foo')
+        self.r((1,'foo'))
 
     def test_ignore_after_accept(self):
         self.a.recv_accept_request(5, 'foo')
-        self.assertEquals( self.a.recv_prepare(1), None )
+        self.r( (5, 'foo') )
+        self.a.recv_prepare(1)
+        self.r( None )
 
     
-class LearnerTester (object):
+class LearnerTester (MTester):
 
     Klass = None
 
     def setUp(self):
-        self.l = self.Klass(3)
+        super(LearnerTester, self).setUp()
+        self.l = self.Klass(self.messenger, 'uid', 3)
 
+    def v(self, ignore, x):
+        self.assertEquals( self.l.final_value, x )
 
     def test_one(self):
-        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
+        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
 
     def test_two(self):
-        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None )
+        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None )
 
     def test_three(self):
-        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
+        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
 
     def test_three(self):
-        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
+        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
 
     def test_duplicates(self):
-        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
+        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
+        self.v( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
 
     def test_ignore_one(self):
-        self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, (1,'1'), 'bar'), None  )
-        self.assertEquals( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
+        self.v( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+        self.v( self.l.recv_accepted(3, (1,'1'), 'bar'), None  )
+        self.v( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
 
     def test_ignore_old(self):
-        self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (1,'1'), 'bar'), None  )
-        self.assertEquals( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
+        self.v( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (1,'1'), 'bar'), None  )
+        self.v( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
 
     def test_override_old(self):
-        self.assertEquals( self.l.recv_accepted(1, (1,'1'), 'bar'), None  )
-        self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-        self.assertEquals( self.l.recv_accepted(3, (2,'2'), 'foo'), 'foo' )
+        self.v( self.l.recv_accepted(1, (1,'1'), 'bar'), None  )
+        self.v( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
+        self.v( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
+        self.v( self.l.recv_accepted(3, (2,'2'), 'foo'), 'foo' )
 
     #def test_ignore_done(self):
     #    self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
@@ -239,11 +285,11 @@ class LearnerTester (object):
 
 
         
-class BasicProposerTest(ProposerTester, unittest.TestCase):
-    Klass = node.Proposer
+class NodeProposerTest(ProposerTester, unittest.TestCase):
+    Klass = node.PaxosNode
 
-class BasicAcceptorTest(AcceptorTester, unittest.TestCase):
-    Klass = node.Acceptor
+class NodeAcceptorTest(AcceptorTester, unittest.TestCase):
+    Klass = node.PaxosNode
 
-class BasicLearnerTest(LearnerTester, unittest.TestCase):
-    Klass = node.Learner
+class NodeLearnerTest(LearnerTester, unittest.TestCase):
+    Klass = node.PaxosNode
