@@ -18,7 +18,6 @@ class TMessenger (object):
     accept_nack  = None
     accepted     = None
     lacq         = None
-    llost        = None
     resolution   = None
     
     def send_prepare(self, proposer_obj, proposal_id):
@@ -40,9 +39,6 @@ class TMessenger (object):
         self.accepted = (proposal_id, accepted_value)
 
     def on_leadership_acquired(self, proposer_obj):
-        self.lacq = True
-
-    def on_leadership_lost(self, proposer_obj):
         self.lacq = True
 
     def on_resolution(self, proposer_obj, proposal_id, value):
@@ -72,6 +68,7 @@ class ProposerTester (MTester):
     def test_prepare(self):
         self.p.prepare()
         self.ae('prepare', (1,'uid'))
+        self.assertTrue( not self.p.leader )
 
 
     def test_prepare_two(self):
@@ -87,12 +84,18 @@ class ProposerTester (MTester):
 
     def test_promise_empty(self):
         self.p.prepare()
+        self.assertTrue( not self.p.leader )
         self.p.recv_promise( 'a', (1,'uid'), None, None )
+        self.assertTrue( not self.p.leader )
         self.ae('accept', None)
         self.p.recv_promise( 'b', (1,'uid'), None, None )
+        self.assertTrue( not self.p.leader )
+        self.ae('lacq', None)
         self.ae('accept', None)
         self.p.recv_promise( 'c', (1,'uid'), None, None )
         self.ae('accept', ((1,'uid'), 'foo'))
+        self.assertTrue( self.p.leader )
+        self.ae('lacq', True)
 
     def test_promise_ignore(self):
         self.p.prepare()

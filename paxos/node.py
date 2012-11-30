@@ -1,17 +1,9 @@
 '''
-The intent of this module is to provide a minimally correct implementation of
-the Paxos algorithm. These classes may be used as-is to provide correctness to
-more advanced implementations that enhance the basic model with such things as
-timeouts, retransmit, liveness-detectors, etc. 
-
-Instances of these classes are intended for a single instance of the algorithm
-only.
-
-As this is an algorithm-only implementation that has no notion of "message
-passing", the return values of the function are used in place of message
-passing. Whenever a function returns None, it indicates that no messages
-should be sent. Otherwise, the next message in the Paxos sequence must be
-sent with the contents of the return value.
+This module provides a minimal implementation of the Paxos algorithm that
+explicitly decouples all external messaging concerns from the algortihm
+internals. These classes may be used as-is to provide correctness to
+network-aware applications that enhance the basic Paxos model with
+such things as timeouts, retransmits, and liveness-detectors.
 '''
 
 
@@ -51,11 +43,6 @@ class Messenger (object):
         Called when leadership has been aquired
         '''
 
-    def on_leadership_lost(self, proposer_obj):
-        '''
-        Called when leadership has been lost
-        '''
-
     def on_resolution(self, proposer_obj, proposal_id, value):
         '''
         Called when a resolution is reached
@@ -85,10 +72,11 @@ class Proposer (object):
         if self.proposed_value is None:
             self.proposed_value = value
 
+
             
     def prepare(self):
         '''
-        Returns a new proposal id that is higher than any previously seen proposal id.
+        Creates a new proposal id that is higher than any previously seen proposal id.
         The proposal id is a tuple of (proposal_numer, node_uid)
         '''
         self.leader        = False
@@ -100,7 +88,6 @@ class Proposer (object):
 
         self.messenger.send_prepare(self, self.proposal_id)
         
-        return self.proposal_id
 
     
 
@@ -117,9 +104,7 @@ class Proposer (object):
 
     def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         '''
-        acceptor_uid - Needed to ensure duplicate messages from this node are ignored
-        
-        Returns: None for no action or (proposal_number, value) for Accept! message
+        acceptor_uid - Needed to ensure duplicate messages from nodes are ignored
         '''
         if proposal_id >= (self.next_proposal_number, self.node_uid):
             self.next_proposal_number = proposal_id[0] + 1
@@ -137,9 +122,11 @@ class Proposer (object):
         if len(self.promises_rcvd) == self.quorum_size:
             self.leader = True
 
-            self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
+            self.messenger.on_leadership_acquired(self)
             
-            return self.proposal_id, self.proposed_value
+            if self.proposed_value is not None:
+                self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
+            
 
 
 
@@ -154,19 +141,14 @@ class Acceptor (object):
     previous_id    = None
     
     def recv_prepare(self, proposal_id):
-        '''
-        Returns: None on prepare failed. (proposal_id, promised_id, accepted_value) on success
-        '''
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
             self.messenger.send_promise(self, proposal_id, self.previous_id, self.accepted_value)
-            return proposal_id, self.previous_id, self.accepted_value
         
         if proposal_id > self.promised_id:
             self.previous_id = self.promised_id            
             self.promised_id = proposal_id
             self.messenger.send_promise(self, proposal_id, self.previous_id, self.accepted_value)
-            return proposal_id, self.previous_id, self.accepted_value
 
         
     def recv_accept_request(self, proposal_id, value):
@@ -177,7 +159,6 @@ class Acceptor (object):
             self.accepted_value  = value
             self.promised_id     = proposal_id
             self.messenger.send_accepted(self, proposal_id, self.accepted_value)
-            return proposal_id, self.accepted_value
         
 
 
@@ -202,7 +183,7 @@ class Learner (object):
         Only messages from valid acceptors may result in calling this function.
         '''
         if self.final_value is not None:
-            return self.final_value # already done
+            return # already done
 
         if self.proposals is None:
             self.proposals = dict()
@@ -238,8 +219,6 @@ class Learner (object):
             self.acceptors         = None
 
         self.messenger.on_resolution( self, proposal_id, accepted_value )
-                                      
-        return self.final_value
             
 
 
@@ -265,7 +244,7 @@ class PaxosNode (Proposer, Acceptor, Learner):
 
     
 
-    def set_messenger(self, messenger):
+    def on_recover(self, messenger):
         '''
         Required after unpickling a Node object to re-establish the
         messenger attribute
