@@ -66,7 +66,6 @@ class HeartbeatPaxosNode (node.PaxosNode):
         
         super(HeartbeatPaxosNode, self).__init__(messenger, my_uid, quorum_size, proposed_value)
 
-        self.proposal_id         = (1, self.node_uid)
         self.leader_proposal_id  = (1, leader_uid)
         self._tlast              = self.timestamp()
         self._acquiring          = False
@@ -77,6 +76,12 @@ class HeartbeatPaxosNode (node.PaxosNode):
 
         if self.node_uid == leader_uid:
             self.leader = True
+
+
+    @property
+    def current_leader_uid(self):
+        return self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
+
 
 
     def on_recover(self, messenger):
@@ -108,19 +113,6 @@ class HeartbeatPaxosNode (node.PaxosNode):
             
         elif not self.leader_is_alive():
             self.acquire_leadership()
-
-
-            
-    def set_proposal(self, value):
-        '''
-        Sets the proposal value for this node iff this node is not already aware of
-        another proposal having already been accepted. 
-        '''
-        if self.value is None:
-            self.value = value
-
-            if self.leader:
-                self.messenger.send_accept( self, self.proposal_id, self.value )
 
 
             
@@ -165,7 +157,6 @@ class HeartbeatPaxosNode (node.PaxosNode):
         else:
             self._acquiring = True
             self.prepare()
-            self.messenger.send_prepare( self, self.proposal_id )
 
 
         

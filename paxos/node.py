@@ -72,6 +72,9 @@ class Proposer (object):
         if self.proposed_value is None:
             self.proposed_value = value
 
+            if self.leader:
+                self.messenger.send_accept( self, self.proposal_id, self.value )
+
 
             
     def prepare(self):
