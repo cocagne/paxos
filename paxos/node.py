@@ -245,7 +245,15 @@ class Node (Proposer, Acceptor, Learner):
     def change_quorum_size(self, quorum_size):
         self.quorum_size
 
-    
+
+        
+    def recv_prepare(self, proposal_id):
+        self.observe_proposal( proposal_id )
+        return super(Node,self).recv_prepare( proposal_id )
+
+
+
+class PickleableNodeMixin (object):
 
     def on_recover(self, messenger):
         '''
@@ -259,9 +267,3 @@ class Node (Proposer, Acceptor, Learner):
         pstate = dict( self.__dict__ )
         del pstate['messenger']
         return pstate
-
-        
-    def recv_prepare(self, proposal_id):
-        self.observe_proposal( proposal_id )
-        return super(Node,self).recv_prepare( proposal_id )
-    
