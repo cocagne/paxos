@@ -226,7 +226,7 @@ class Learner (object):
 
 
     
-class PaxosNode (Proposer, Acceptor, Learner):
+class Node (Proposer, Acceptor, Learner):
     '''
     This class supports the common model where each node on a network preforms
     all three Paxos roles, Proposer, Acceptor, and Learner.
@@ -263,5 +263,5 @@ class PaxosNode (Proposer, Acceptor, Learner):
         
     def recv_prepare(self, proposal_id):
         self.observe_proposal( proposal_id )
-        return super(PaxosNode,self).recv_prepare( proposal_id )
+        return super(Node,self).recv_prepare( proposal_id )
     

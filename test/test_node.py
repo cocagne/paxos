@@ -289,10 +289,10 @@ class LearnerTester (MTester):
 
         
 class NodeProposerTest(ProposerTester, unittest.TestCase):
-    Klass = node.PaxosNode
+    Klass = node.Node
 
 class NodeAcceptorTest(AcceptorTester, unittest.TestCase):
-    Klass = node.PaxosNode
+    Klass = node.Node
 
 class NodeLearnerTest(LearnerTester, unittest.TestCase):
-    Klass = node.PaxosNode
+    Klass = node.Node

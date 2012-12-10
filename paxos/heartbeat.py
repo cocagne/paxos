@@ -30,7 +30,7 @@ class HeartbeatMessenger (node.Messenger):
         '''
     
 
-class HeartbeatPaxosNode (node.PaxosNode):
+class HeartbeatNode (node.Node):
     '''
     This class augments the basic Paxos node to provide a reasonable
     assurance of progress through a heartbeat mechanism used to detect leader
@@ -64,7 +64,7 @@ class HeartbeatPaxosNode (node.PaxosNode):
     def __init__(self, messenger, my_uid, quorum_size, proposed_value=None, leader_uid=None,
                  hb_period=None, liveness_window=None):
         
-        super(HeartbeatPaxosNode, self).__init__(messenger, my_uid, quorum_size, proposed_value)
+        super(HeartbeatNode, self).__init__(messenger, my_uid, quorum_size, proposed_value)
 
         self.leader_proposal_id  = (1, leader_uid)
         self._tlast              = self.timestamp()
@@ -88,14 +88,14 @@ class HeartbeatPaxosNode (node.PaxosNode):
         '''
         Must be called after the instance has been recovered from durable state
         '''
-        super(HeartbeatPaxosNode, self).on_recover(messenger)
+        super(HeartbeatNode, self).on_recover(messenger)
         self.leader_proposal_id = (0,None)
 
 
             
     def prepare(self):
         self._nacks.clear()
-        return super(HeartbeatPaxosNode, self).prepare()
+        return super(HeartbeatNode, self).prepare()
         
 
         
@@ -164,7 +164,7 @@ class HeartbeatPaxosNode (node.PaxosNode):
 
         pre_leader = self.leader
         
-        super(HeartbeatPaxosNode, self).recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
+        super(HeartbeatNode, self).recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
 
         if not pre_leader and self.leader:
             old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None

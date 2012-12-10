@@ -70,7 +70,7 @@ class HMessenger (test_node.TMessenger):
         
 
 
-class HNode(heartbeat.HeartbeatPaxosNode):
+class HNode(heartbeat.HeartbeatNode):
     hb_period       = 2
     liveness_window = 6
 
