@@ -13,7 +13,7 @@ class Messenger (object):
         Sends a Prepare message
         '''
 
-    def send_promise(self, proposer_obj, proposal_id, proposal_value, accepted_value):
+    def send_promise(self, proposer_obj, proposal_id, previous_id, accepted_value):
         '''
         Sends a Promise message
         '''
@@ -28,7 +28,7 @@ class Messenger (object):
         Sends an Accept! message
         '''
 
-    def send_accept_nack(self, proposer_obj, proposal_id):
+    def send_accept_nack(self, proposer_obj, proposal_id, promised_id):
         '''
         Sends a Accept! Nack message for the proposal
         '''
@@ -90,10 +90,9 @@ class Proposer (object):
         self.next_proposal_number += 1
 
         self.messenger.send_prepare(self, self.proposal_id)
-        
+
 
     
-
     def observe_proposal(self, proposal_id):
         '''
         Optional method used to update the proposal counter as proposals are seen on the network.
@@ -104,7 +103,23 @@ class Proposer (object):
             self.next_proposal_number = proposal_id[0] + 1
 
 
+            
+    def recv_prepare_nack(self, proposal_id):
+        '''
+        Called when an explicit NACK is sent in response to a prepare message.
+        '''
+        pass
 
+    
+
+    def recv_accept_nack(self, acceptor_uid, proposal_id, promised_id):
+        '''
+        Called when an explicit NACK is sent in response to an accept message
+        '''
+        pass
+
+
+    
     def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         '''
         acceptor_uid - Needed to ensure duplicate messages from nodes are ignored
@@ -162,6 +177,8 @@ class Acceptor (object):
             self.accepted_value  = value
             self.promised_id     = proposal_id
             self.messenger.send_accepted(self, proposal_id, self.accepted_value)
+        else:
+            self.messenger.send_accept_nack(self, self.promised_id)
         
 
 

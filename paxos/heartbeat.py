@@ -173,10 +173,16 @@ class HeartbeatNode (node.Node):
             self._acquiring         = False
             self.pulse()
             self.messenger.on_leadership_change( self, old_leader_uid, proposal_id[1] )
+
+
             
+    def recv_prepare_nack(self, proposal_id):
+        if self._acquiring:
+            self.observe_proposal( proposal_id )
+            self.prepare()
 
 
-    def recv_accept_nack(self, acceptor_uid, proposal_id, new_proposal_id):
+    def recv_accept_nack(self, acceptor_uid, proposal_id, promised_id):
         if proposal_id == self.proposal_id:
             self._nacks.add(acceptor_uid)
 
@@ -184,7 +190,7 @@ class HeartbeatNode (node.Node):
             self.leader_proposal_id = None
             self.messenger.on_leadership_lost(self)
             self.messenger.on_leadership_change(self, self.node_uid, None)
-            self.observe_proposal( new_proposal_id )
+            self.observe_proposal( promised_id )
 
 
     
