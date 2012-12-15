@@ -73,7 +73,7 @@ class Proposer (object):
             self.proposed_value = value
 
             if self.leader:
-                self.messenger.send_accept( self, self.proposal_id, self.value )
+                self.messenger.send_accept( self, self.proposal_id, value )
 
 
             

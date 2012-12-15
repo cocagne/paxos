@@ -75,7 +75,10 @@ class HeartbeatNode (node.Node):
         if liveness_window: self.liveness_window = liveness_window
 
         if self.node_uid == leader_uid:
-            self.leader = True
+            self.leader                = True
+            self.proposal_id           = (self.next_proposal_number, self.node_uid)
+            self.next_proposal_number += 1
+
 
 
     @property
