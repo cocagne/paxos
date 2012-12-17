@@ -190,6 +190,7 @@ class HeartbeatNode (node.Node):
             self._nacks.add(acceptor_uid)
 
         if self.leader and len(self._nacks) >= self.quorum_size:
+            self.leader = False
             self.leader_proposal_id = None
             self.messenger.on_leadership_lost(self)
             self.messenger.on_leadership_change(self, self.node_uid, None)
