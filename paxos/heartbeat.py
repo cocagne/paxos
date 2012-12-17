@@ -119,7 +119,7 @@ class HeartbeatNode (node.Node):
 
 
             
-    def recv_heartbeat(self, proposal_id):
+    def recv_heartbeat(self, proposal_id):        
         leader_proposal_number, node_uid = proposal_id
 
         if proposal_id > self.leader_proposal_id:

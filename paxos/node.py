@@ -124,7 +124,7 @@ class Proposer (object):
         '''
         acceptor_uid - Needed to ensure duplicate messages from nodes are ignored
         '''
-        if proposal_id >= (self.next_proposal_number, self.node_uid):
+        if proposal_id > (self.next_proposal_number-1, self.node_uid):
             self.next_proposal_number = proposal_id[0] + 1
 
         if self.leader or proposal_id != self.proposal_id or acceptor_uid in self.promises_rcvd:
