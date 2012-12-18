@@ -28,8 +28,9 @@ class HeartbeatMessenger (node.Messenger):
         '''
         Called when a change in leadership is detected
         '''
-    
 
+        
+    
 class HeartbeatNode (node.Node):
     '''
     This class augments the basic Paxos node to provide a reasonable

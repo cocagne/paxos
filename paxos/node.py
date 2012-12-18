@@ -120,6 +120,11 @@ class Proposer (object):
 
 
     
+    def retransmit_accept(self):
+        if self.leader and self.proposed_value:
+            self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
+    
+    
     def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
         '''
         acceptor_uid - Needed to ensure duplicate messages from nodes are ignored
@@ -258,7 +263,23 @@ class Node (Proposer, Acceptor, Learner):
             self.set_proposal( proposed_value )
             
 
+            
+    def __getstate__(self):
+        pstate = dict( self.__dict__ )
+        del pstate['messenger']
+        return pstate
 
+
+    
+    def recover(self, messenger):
+        '''
+        Required after unpickling a Node object to re-establish the
+        messenger attribute
+        '''
+        self.messenger = messenger
+
+
+        
     def change_quorum_size(self, quorum_size):
         self.quorum_size
 
@@ -269,18 +290,3 @@ class Node (Proposer, Acceptor, Learner):
         return super(Node,self).recv_prepare( proposal_id )
 
 
-
-class PickleableNodeMixin (object):
-
-    def on_recover(self, messenger):
-        '''
-        Required after unpickling a Node object to re-establish the
-        messenger attribute
-        '''
-        self.messenger = messenger
-
-        
-    def __getstate__(self):
-        pstate = dict( self.__dict__ )
-        del pstate['messenger']
-        return pstate
