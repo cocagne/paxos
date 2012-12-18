@@ -67,8 +67,10 @@ class HeartbeatNode (node.Node):
         
         super(HeartbeatNode, self).__init__(messenger, my_uid, quorum_size, proposed_value)
 
+        self.leader_uid          = leader_uid
         self.leader_proposal_id  = (1, leader_uid)
-        self._tlast              = self.timestamp()
+        self._tlast_hb           = self.timestamp()
+        self._tlast_prep         = self.timestamp()
         self._acquiring          = False
         self._nacks              = set()
 
@@ -81,10 +83,10 @@ class HeartbeatNode (node.Node):
             self.next_proposal_number += 1
 
 
-
+            
     @property
     def current_leader_uid(self):
-        return self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
+        return self.leader_uid 
 
 
 
@@ -93,7 +95,8 @@ class HeartbeatNode (node.Node):
         Must be called after the instance has been recovered from durable state
         '''
         super(HeartbeatNode, self).on_recover(messenger)
-        self.leader_proposal_id = (0,None)
+        self.leader_uid         = None
+        self.leader_proposal_id = (1,None)
 
 
             
@@ -104,7 +107,11 @@ class HeartbeatNode (node.Node):
 
         
     def leader_is_alive(self):
-        return self.timestamp() - self._tlast <= self.liveness_window
+        return self.timestamp() - self._tlast_hb <= self.liveness_window
+
+
+    def observed_recent_prepare(self):
+        return self.timestamp() - self._tlast_prep <= self.liveness_window * 1.5
 
 
     
@@ -112,34 +119,34 @@ class HeartbeatNode (node.Node):
         '''
         Should be called every liveness_window
         '''
-        if self._acquiring:
-            self.messenger.send_prepare( self, self.proposal_id )
-            
-        elif not self.leader_is_alive():
-            self.acquire_leadership()
+        if not self.leader_is_alive() and not self.observed_recent_prepare():
+            if self._acquiring:
+                self.resend_prepare()
+            else:
+                self.acquire_leadership()
 
 
             
-    def recv_heartbeat(self, proposal_id):        
-        leader_proposal_number, node_uid = proposal_id
+    def recv_heartbeat(self, from_uid, proposal_id):
 
         if proposal_id > self.leader_proposal_id:
             # Change of leadership            
             self._acquiring = False
             
-            old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
-            
+            old_leader_uid = self.leader_uid
+
+            self.leader_uid         = from_uid
             self.leader_proposal_id = proposal_id
 
-            if self.leader and proposal_id[1] != self.node_uid:
+            if self.leader and from_uid != self.node_uid:
                 self.leader = False
                 self.messenger.on_leadership_lost(self)
-                self.observe_proposal( proposal_id )
+                self.observe_proposal( from_uid, proposal_id )
 
-            self.messenger.on_leadership_change( self, old_leader_uid, proposal_id[1] )            
+            self.messenger.on_leadership_change( self, old_leader_uid, from_uid )
 
         if self.leader_proposal_id == proposal_id:
-            self._tlast = self.timestamp()
+            self._tlast_hb = self.timestamp()
                 
 
             
@@ -148,7 +155,7 @@ class HeartbeatNode (node.Node):
         Must be called every hb_period while this node is the leader
         '''
         if self.leader:
-            self.recv_heartbeat(self.proposal_id)
+            self.recv_heartbeat(self.node_uid, self.proposal_id)
             self.messenger.send_heartbeat(self, self.proposal_id)
             self.messenger.schedule(self, self.hb_period, self.pulse)
 
@@ -163,6 +170,11 @@ class HeartbeatNode (node.Node):
             self.prepare()
 
 
+    def recv_prepare(self, node_uid, proposal_id):
+        super(HeartbeatNode, self).recv_prepare( proposal_id )
+        if node_uid != self.node_uid:
+            self._tlast_prep = self.timestamp()
+    
         
     def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
 
@@ -171,32 +183,34 @@ class HeartbeatNode (node.Node):
         super(HeartbeatNode, self).recv_promise(acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value)
 
         if not pre_leader and self.leader:
-            old_leader_uid = self.leader_proposal_id[1] if self.leader_proposal_id is not None else None
-            
+            old_leader_uid = self.leader_uid
+
+            self.leader_uid         = self.node_uid
             self.leader_proposal_id = self.proposal_id
             self._acquiring         = False
             self.pulse()
-            self.messenger.on_leadership_change( self, old_leader_uid, proposal_id[1] )
+            self.messenger.on_leadership_change( self, old_leader_uid, self.node_uid )
 
 
             
-    def recv_prepare_nack(self, proposal_id):
+    def recv_prepare_nack(self, from_uid, proposal_id):
         if self._acquiring:
-            self.observe_proposal( proposal_id )
+            self.observe_proposal( from_uid, proposal_id )
             self.prepare()
 
 
-    def recv_accept_nack(self, acceptor_uid, proposal_id, promised_id):
+    def recv_accept_nack(self, from_uid, proposal_id, promised_id):
         if proposal_id == self.proposal_id:
-            self._nacks.add(acceptor_uid)
+            self._nacks.add(from_uid)
 
         if self.leader and len(self._nacks) >= self.quorum_size:
             self.leader             = False
             self.promises_rcvd      = set()
+            self.leader_uid         = None
             self.leader_proposal_id = None
             self.messenger.on_leadership_lost(self)
             self.messenger.on_leadership_change(self, self.node_uid, None)
-            self.observe_proposal( promised_id )
+            self.observe_proposal( from_uid, promised_id )
 
 
     

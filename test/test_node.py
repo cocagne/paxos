@@ -23,20 +23,20 @@ class TMessenger (object):
     def send_prepare(self, proposer_obj, proposal_id):
         self.prepare = proposal_id
 
-    def send_promise(self, proposer_obj, proposal_id, proposal_value, accepted_value):
-        self.promise = (proposal_id, proposal_value, accepted_value)
+    def send_promise(self, proposer_obj, to_uid, proposal_id, proposal_value, accepted_value):
+        self.promise = (to_uid, proposal_id, proposal_value, accepted_value)
         
-    def send_prepare_nack(self, propser_obj, proposal_id):
-        self.prepare_nack = proposal_id
+    def send_prepare_nack(self, propser_obj, to_uid, proposal_id):
+        self.prepare_nack = (to_uid, proposal_id)
 
     def send_accept(self, proposer_obj, proposal_id, proposal_value):
         self.accept = (proposal_id, proposal_value)
 
-    def send_accept_nack(self, proposer_obj, proposal_id):
-        self.accept_nack = proposal_id
+    def send_accept_nack(self, proposer_obj, to_uid, proposal_id):
+        self.accept_nack = to_uid, proposal_id
 
-    def send_accepted(self, proposer_obj, proposal_id, accepted_value):
-        self.accepted = (proposal_id, accepted_value)
+    def send_accepted(self, proposer_obj, to_uid, proposal_id, accepted_value):
+        self.accepted = (to_uid, proposal_id, accepted_value)
 
     def on_leadership_acquired(self, proposer_obj):
         self.lacq = True
@@ -167,62 +167,62 @@ class AcceptorTester (MTester):
         self.ae('accepted', x)
 
     def test_first(self):
-        self.a.recv_prepare(1)
-        self.p( (1, None,None) )
+        self.a.recv_prepare('AUID',1)
+        self.p( ('AUID', 1, None,None) )
         
 
     def test_no_value_two(self):
-        self.a.recv_prepare(1)
-        self.a.recv_prepare(2)
-        self.p( (2, 1, None) )
+        self.a.recv_prepare('AUID',1)
+        self.a.recv_prepare('AUID',2)
+        self.p( ('AUID', 2, 1, None) )
 
     def test_no_value_ignore_old(self):
-        self.a.recv_prepare(2)
-        self.p( (2, None, None) )
-        self.a.recv_prepare(1)
+        self.a.recv_prepare('AUID',2)
+        self.p( ('AUID', 2, None, None) )
+        self.a.recv_prepare('AUID',1)
         self.p( None )
 
     def test_value_two(self):
-        self.a.recv_prepare(1)
-        self.p( (1, None, None) )
-        self.a.recv_accept_request(1, 'foo')
-        self.a.recv_prepare(2)
-        self.p( (2, 1, 'foo') )
-        self.r( (1, 'foo') )
+        self.a.recv_prepare('AUID',1)
+        self.p( ('AUID', 1, None, None) )
+        self.a.recv_accept_request('AUID', 1, 'foo')
+        self.a.recv_prepare('AUID',2)
+        self.p( ('AUID', 2, 1, 'foo') )
+        self.r( ('AUID', 1, 'foo') )
 
     def test_value_ignore_old(self):
-        self.a.recv_prepare(2)
-        self.p( (2, None, None) )
-        self.a.recv_accept_request(2, 'foo')
-        self.r( (2, 'foo') )
-        self.a.recv_prepare(1)
+        self.a.recv_prepare('AUID', 2)
+        self.p( ('AUID', 2, None, None) )
+        self.a.recv_accept_request('AUID', 2, 'foo')
+        self.r( ('AUID', 2, 'foo') )
+        self.a.recv_prepare('AUID', 1)
         self.p( None )
         self.r( None )
 
     def test_prepared_accept(self):
-        self.a.recv_prepare(1)
-        self.a.recv_accept_request(1, 'foo')
-        self.r( (1,'foo'))
+        self.a.recv_prepare('AUID',1)
+        self.a.recv_accept_request('AUID', 1, 'foo')
+        self.r( ('AUID', 1,'foo'))
 
     def test_unprepared_accept(self):
-        self.a.recv_accept_request(1, 'foo')
-        self.r( (1,'foo'))
+        self.a.recv_accept_request('AUID', 1, 'foo')
+        self.r( ('AUID', 1,'foo'))
 
     def test_ignored_accept(self):
-        self.a.recv_prepare(5)
-        self.a.recv_accept_request(1, 'foo')
+        self.a.recv_prepare('AUID',5)
+        self.a.recv_accept_request('AUID', 1, 'foo')
         self.r(None)
 
     def test_duplicate_accept(self):
-        self.a.recv_accept_request(1, 'foo')
-        self.r((1,'foo'))
-        self.a.recv_accept_request(1, 'foo')
-        self.r((1,'foo'))
+        self.a.recv_accept_request('AUID', 1, 'foo')
+        self.r(('AUID', 1,'foo'))
+        self.a.recv_accept_request('AUID', 1, 'foo')
+        self.r(('AUID', 1,'foo'))
 
     def test_ignore_after_accept(self):
-        self.a.recv_accept_request(5, 'foo')
-        self.r( (5, 'foo') )
-        self.a.recv_prepare(1)
+        self.a.recv_accept_request('AUID', 5, 'foo')
+        self.r( ('AUID', 5, 'foo') )
+        self.a.recv_prepare('AUID',1)
         self.r( None )
 
     

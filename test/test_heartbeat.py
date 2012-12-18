@@ -97,29 +97,30 @@ class HeartbeatProposerTester (unittest.TestCase):
 
         
     def test_initial_wait(self):
-        for i in range(1,7):
+        for i in range(1,10):
             self.p()
             self.assertEquals( self.l.proposal_id, None )
             
         self.p()
+        
         self.assertEquals( self.l.proposal_id, (1,'uid') )
 
 
     def test_initial_leader(self):
         self.l.leader_proposal_id = (1, 'other')
         
-        for i in range(1,7):
+        for i in range(1,10):
             self.p()
             self.assertEquals( self.l.proposal_id, None )
 
-        self.l.recv_heartbeat( (1,'other') )
+        self.l.recv_heartbeat('other', (1,'other'))
         
         self.p()
         self.assertEquals( self.l.proposal_id, None )
 
         
     def test_gain_leader(self):
-        for i in range(1,7):
+        for i in range(1,10):
             self.p()
 
         self.assertEquals( self.m.pcount, 0 )
@@ -139,7 +140,7 @@ class HeartbeatProposerTester (unittest.TestCase):
 
 
     def XXXtest_leader_acquire_rejected(self):
-        for i in range(1,7):
+        for i in range(1,10):
             self.p()
 
 
@@ -160,7 +161,7 @@ class HeartbeatProposerTester (unittest.TestCase):
 
 
     def test_ignore_old_leader_acquire_rejected(self):
-        for i in range(1,7):
+        for i in range(1,10):
             self.p()
 
         self.assertEquals( self.m.pcount, 0 )
@@ -187,7 +188,7 @@ class HeartbeatProposerTester (unittest.TestCase):
 
         self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
         
-        self.l.recv_heartbeat( (5,'other') )
+        self.l.recv_heartbeat( 'other', (5,'other') )
 
         self.assertEquals( self.l.leader_proposal_id, (5,'other') )
         self.assertEquals( self.m.tleader, 'lost' )
@@ -240,7 +241,7 @@ class HeartbeatProposerTester (unittest.TestCase):
     def test_ignore_old_leader_heartbeat(self):
         self.test_lose_leader()
 
-        self.l.recv_heartbeat( (1,'uid') )
+        self.l.recv_heartbeat( 'uid', (1,'uid') )
 
         self.assertEquals( self.l.leader_proposal_id, (5,'other') )
 
@@ -257,7 +258,7 @@ class HeartbeatProposerTester (unittest.TestCase):
 
 
     def test_leader_acquire_timeout_and_retry(self):
-        for i in range(1,7):
+        for i in range(1,10):
             self.p()
 
         self.assertEquals( self.m.pcount, 0 )
@@ -271,9 +272,8 @@ class HeartbeatProposerTester (unittest.TestCase):
         self.l.recv_promise(3, (1,'uid'), None, None)
         self.ame('accept', None)
 
-        for i in range(0,6):
-            self.assertEquals( self.m.pcount, 1 )
-            self.assertEquals( self.m.cp,     (1,'uid') )
+        self.assertEquals( self.m.pcount, 1 )
+        self.assertEquals( self.m.cp,     (1,'uid') )
 
         self.p()
 

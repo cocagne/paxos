@@ -13,12 +13,12 @@ class Messenger (object):
         Sends a Prepare message
         '''
 
-    def send_promise(self, proposer_obj, proposal_id, previous_id, accepted_value):
+    def send_promise(self, proposer_obj, to_uid, proposal_id, previous_id, accepted_value):
         '''
         Sends a Promise message
         '''
 
-    def send_prepare_nack(self, propser_obj, proposal_id):
+    def send_prepare_nack(self, propser_obj, to_uid, proposal_id):
         '''
         Sends a Prepare Nack message for the proposal
         '''
@@ -28,12 +28,12 @@ class Messenger (object):
         Sends an Accept! message
         '''
 
-    def send_accept_nack(self, proposer_obj, proposal_id, promised_id):
+    def send_accept_nack(self, proposer_obj, to_uid, proposal_id, promised_id):
         '''
         Sends a Accept! Nack message for the proposal
         '''
 
-    def send_accepted(self, proposer_obj, proposal_id, accepted_value):
+    def send_accepted(self, proposer_obj, to_uid, proposal_id, accepted_value):
         '''
         Sends an Accepted message
         '''
@@ -93,18 +93,19 @@ class Proposer (object):
 
 
     
-    def observe_proposal(self, proposal_id):
+    def observe_proposal(self, from_uid, proposal_id):
         '''
         Optional method used to update the proposal counter as proposals are seen on the network.
         When co-located with Acceptors and/or Learners, this method may be used to avoid a message
         delay when attempting to assume leadership (guaranteed NACK if the proposal number is too low).
         '''
-        if proposal_id >= (self.next_proposal_number, self.node_uid):
-            self.next_proposal_number = proposal_id[0] + 1
+        if from_uid != self.node_uid:
+            if proposal_id >= (self.next_proposal_number, self.node_uid):
+                self.next_proposal_number = proposal_id[0] + 1
 
 
             
-    def recv_prepare_nack(self, proposal_id):
+    def recv_prepare_nack(self, from_uid, proposal_id):
         '''
         Called when an explicit NACK is sent in response to a prepare message.
         '''
@@ -112,7 +113,7 @@ class Proposer (object):
 
     
 
-    def recv_accept_nack(self, acceptor_uid, proposal_id, promised_id):
+    def recv_accept_nack(self, from_uid, proposal_id, promised_id):
         '''
         Called when an explicit NACK is sent in response to an accept message
         '''
@@ -120,27 +121,32 @@ class Proposer (object):
 
 
     
-    def retransmit_accept(self):
+    def resend_accept(self):
         if self.leader and self.proposed_value:
             self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
+
+
+    def resend_prepare(self):
+        self.messenger.send_prepare(self, self.proposal_id)
+
+            
     
-    
-    def recv_promise(self, acceptor_uid, proposal_id, prev_proposal_id, prev_proposal_value):
+    def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
         '''
-        acceptor_uid - Needed to ensure duplicate messages from nodes are ignored
+        from_uid - Needed to ensure duplicate messages from nodes are ignored
         '''
         if proposal_id > (self.next_proposal_number-1, self.node_uid):
             self.next_proposal_number = proposal_id[0] + 1
 
-        if self.leader or proposal_id != self.proposal_id or acceptor_uid in self.promises_rcvd:
+        if self.leader or proposal_id != self.proposal_id or from_uid in self.promises_rcvd:
             return
 
-        self.promises_rcvd.add( acceptor_uid )
+        self.promises_rcvd.add( from_uid )
         
-        if prev_proposal_id > self.last_accepted_id:
-            self.last_accepted_id = prev_proposal_id
-            if prev_proposal_value is not None:
-                self.proposed_value   = prev_proposal_value
+        if prev_accepted_id > self.last_accepted_id:
+            self.last_accepted_id = prev_accepted_id
+            if prev_accepted_value is not None:
+                self.proposed_value = prev_accepted_value
 
         if len(self.promises_rcvd) == self.quorum_size:
             self.leader = True
@@ -163,27 +169,27 @@ class Acceptor (object):
     accepted_id    = None
     previous_id    = None
     
-    def recv_prepare(self, proposal_id):
+    def recv_prepare(self, from_uid, proposal_id):
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
-            self.messenger.send_promise(self, proposal_id, self.previous_id, self.accepted_value)
+            self.messenger.send_promise(self, from_uid, proposal_id, self.previous_id, self.accepted_value)
         
         if proposal_id > self.promised_id:
             self.previous_id = self.promised_id            
             self.promised_id = proposal_id
-            self.messenger.send_promise(self, proposal_id, self.previous_id, self.accepted_value)
+            self.messenger.send_promise(self, from_uid, proposal_id, self.previous_id, self.accepted_value)
 
         
-    def recv_accept_request(self, proposal_id, value):
+    def recv_accept_request(self, from_uid, proposal_id, value):
         '''
         Returns: None on request denied. (proposal_id, accepted_value) on accepted
         '''
         if proposal_id >= self.promised_id:
             self.accepted_value  = value
             self.promised_id     = proposal_id
-            self.messenger.send_accepted(self, proposal_id, self.accepted_value)
+            self.messenger.send_accepted(self, from_uid, proposal_id, self.accepted_value)
         else:
-            self.messenger.send_accept_nack(self, self.promised_id)
+            self.messenger.send_accept_nack(self, from_uid, self.promised_id)
         
 
 
@@ -193,7 +199,7 @@ class Learner (object):
     quorum_size       = None
 
     proposals         = None # maps proposal_id => [accept_count, retain_count, value]
-    acceptors         = None # maps acceptor_uid => last_accepted_proposal_id
+    acceptors         = None # maps from_uid => last_accepted_proposal_id
     final_value       = None
     final_proposal_id = None
 
@@ -203,7 +209,7 @@ class Learner (object):
         return self.final_proposal_id is not None
 
 
-    def recv_accepted(self, acceptor_uid, proposal_id, accepted_value):
+    def recv_accepted(self, from_uid, proposal_id, accepted_value):
         '''
         Only messages from valid acceptors may result in calling this function.
         '''
@@ -214,12 +220,12 @@ class Learner (object):
             self.proposals = dict()
             self.acceptors = dict()
         
-        last_pn = self.acceptors.get(acceptor_uid)
+        last_pn = self.acceptors.get(from_uid)
 
         if not proposal_id > last_pn:
             return # Old message
 
-        self.acceptors[ acceptor_uid ] = proposal_id
+        self.acceptors[ from_uid ] = proposal_id
         
         if last_pn is not None:
             oldp = self.proposals[ last_pn ]
@@ -285,8 +291,8 @@ class Node (Proposer, Acceptor, Learner):
 
 
         
-    def recv_prepare(self, proposal_id):
-        self.observe_proposal( proposal_id )
-        return super(Node,self).recv_prepare( proposal_id )
+    def recv_prepare(self, from_uid, proposal_id):
+        self.observe_proposal( from_uid, proposal_id )
+        return super(Node,self).recv_prepare( from_uid, proposal_id )
 
 
