@@ -249,7 +249,7 @@ class Learner (object):
             self.proposals         = None
             self.acceptors         = None
 
-        self.messenger.on_resolution( self, proposal_id, accepted_value )
+            self.messenger.on_resolution( self, proposal_id, accepted_value )
             
 
 

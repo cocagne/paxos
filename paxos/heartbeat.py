@@ -171,7 +171,7 @@ class HeartbeatNode (node.Node):
 
 
     def recv_prepare(self, node_uid, proposal_id):
-        super(HeartbeatNode, self).recv_prepare( proposal_id )
+        super(HeartbeatNode, self).recv_prepare( node_uid, proposal_id )
         if node_uid != self.node_uid:
             self._tlast_prep = self.timestamp()
     
