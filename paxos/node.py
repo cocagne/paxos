@@ -287,7 +287,7 @@ class Node (Proposer, Acceptor, Learner):
 
         
     def change_quorum_size(self, quorum_size):
-        self.quorum_size
+        self.quorum_size = quorum_size
 
 
         
