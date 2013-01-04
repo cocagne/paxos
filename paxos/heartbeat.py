@@ -100,9 +100,9 @@ class HeartbeatNode (node.Node):
 
 
             
-    def prepare(self):
+    def prepare(self, *args, **kwargs):
         self._nacks.clear()
-        return super(HeartbeatNode, self).prepare()
+        return super(HeartbeatNode, self).prepare(*args, **kwargs)
         
 
         
@@ -121,7 +121,7 @@ class HeartbeatNode (node.Node):
         '''
         if not self.leader_is_alive() and not self.observed_recent_prepare():
             if self._acquiring:
-                self.resend_prepare()
+                self.prepare(False)
             else:
                 self.acquire_leadership()
 

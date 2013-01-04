@@ -77,17 +77,21 @@ class Proposer (object):
 
 
             
-    def prepare(self):
+    def prepare(self, increment_proposal_number = True):
         '''
-        Creates a new proposal id that is higher than any previously seen proposal id.
+        Creates a new proposal id that is higher than any previously seen proposal id
+        if the default argument is True. Otherwise it resends the previous proposal.
+        
         The proposal id is a tuple of (proposal_numer, node_uid)
         '''
         self.leader        = False
-        self.promises_rcvd = set()
 
-        self.proposal_id = (self.next_proposal_number, self.node_uid)
+        if increment_proposal_number:
+            self.promises_rcvd = set()
+
+            self.proposal_id = (self.next_proposal_number, self.node_uid)
         
-        self.next_proposal_number += 1
+            self.next_proposal_number += 1
 
         self.messenger.send_prepare(self, self.proposal_id)
 
@@ -126,11 +130,6 @@ class Proposer (object):
             self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
 
 
-    def resend_prepare(self):
-        self.messenger.send_prepare(self, self.proposal_id)
-
-            
-    
     def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
         '''
         from_uid - Needed to ensure duplicate messages from nodes are ignored
