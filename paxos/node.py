@@ -84,12 +84,10 @@ class Proposer (object):
         
         The proposal id is a tuple of (proposal_numer, node_uid)
         '''
-        self.leader        = False
-
         if increment_proposal_number:
+            self.leader        = False
             self.promises_rcvd = set()
-
-            self.proposal_id = (self.next_proposal_number, self.node_uid)
+            self.proposal_id   = (self.next_proposal_number, self.node_uid)
         
             self.next_proposal_number += 1
 
@@ -113,7 +111,6 @@ class Proposer (object):
         '''
         Called when an explicit NACK is sent in response to a prepare message.
         '''
-        pass
 
     
 
@@ -121,7 +118,6 @@ class Proposer (object):
         '''
         Called when an explicit NACK is sent in response to an accept message
         '''
-        pass
 
 
     
@@ -130,6 +126,7 @@ class Proposer (object):
             self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
 
 
+            
     def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
         '''
         from_uid - Needed to ensure duplicate messages from nodes are ignored
@@ -144,8 +141,7 @@ class Proposer (object):
         
         if prev_accepted_id > self.last_accepted_id:
             self.last_accepted_id = prev_accepted_id
-            if prev_accepted_value is not None:
-                self.proposed_value = prev_accepted_value
+            self.proposed_value   = prev_accepted_value
 
         if len(self.promises_rcvd) == self.quorum_size:
             self.leader = True

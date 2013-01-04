@@ -1,4 +1,5 @@
 import sys
+import itertools
 import os.path
 
 #from twisted.trial import unittest
@@ -9,290 +10,259 @@ sys.path.append( os.path.dirname(this_dir) )
 
 from paxos import node
 
+class Messenger (object):
+    leader_acquired = False
+    resolution      = None
 
-class TMessenger (object):
-    prepare      = None
-    promise      = None
-    prepare_nack = None
-    accept       = None
-    accept_nack  = None
-    accepted     = None
-    lacq         = None
-    resolution   = None
-    
+    proposer_obj = None
+
+    def setUp(self):
+        self._msgs = list()
+
+    def _append(self, proposer_obj, *args):
+        self.assertTrue( proposer_obj is self.proposer_obj )
+        self._msgs.append(args)
+        
     def send_prepare(self, proposer_obj, proposal_id):
-        self.prepare = proposal_id
+        self._append(proposer_obj, 'prepare', proposal_id)
 
     def send_promise(self, proposer_obj, to_uid, proposal_id, proposal_value, accepted_value):
-        self.promise = (to_uid, proposal_id, proposal_value, accepted_value)
+        self._append(proposer_obj, 'promise', to_uid, proposal_id, proposal_value, accepted_value)
         
     def send_prepare_nack(self, propser_obj, to_uid, proposal_id):
-        self.prepare_nack = (to_uid, proposal_id)
+        self._append(proposer_obj, 'prepare_nack', to_uid, proposal_id)
 
     def send_accept(self, proposer_obj, proposal_id, proposal_value):
-        self.accept = (proposal_id, proposal_value)
+        self._append(proposer_obj, 'accept', proposal_id, proposal_value)
 
     def send_accept_nack(self, proposer_obj, to_uid, proposal_id):
-        self.accept_nack = to_uid, proposal_id
+        self._append(proposer_obj, 'accept_nack', to_uid, proposal_id)
 
     def send_accepted(self, proposer_obj, to_uid, proposal_id, accepted_value):
-        self.accepted = (to_uid, proposal_id, accepted_value)
+        self._append(proposer_obj, 'accepted', to_uid, proposal_id, accepted_value)
 
     def on_leadership_acquired(self, proposer_obj):
-        self.lacq = True
+        self.leader_acquired = True
 
     def on_resolution(self, proposer_obj, proposal_id, value):
         self.resolution = (proposal_id, value)
 
+    @property
+    def last_msg(self):
+        return self._msgs[-1]
 
-class MTester (object):
+    def nmsgs(self):
+        return len(self._msgs)
 
-    def setUp(self):
-        self.messenger = TMessenger()
-        
-    def ae(self, attr_name, expected):
-        self.assertEquals( getattr(self.messenger, attr_name), expected )
-        setattr(self.messenger, attr_name, None)
+    def clear_msgs(self):
+        self._msgs = list()
+
+    def am(self, *args):
+        self.assertTrue(len(self._msgs) == 1)
+        self.assertEquals( self.last_msg, args )
+        self._msgs = list()
+
+    def amm(self, msgs):
+        self.assertEquals( len(self._msgs), len(msgs) )
+        for a, e in itertools.izip(self._msgs, msgs):
+            self.assertEquals( a, e )
+        self._msgs = list()
+
+    def an(self):
+        self.assertTrue( len(self._msgs) == 0 )
+
+    def ae(self, *args):
+        self.assertEquals(*args)
+
+    def at(self, *args):
+        self.assertTrue(*args)
 
 
-class ProposerTester (MTester):
 
-    Klass = None
+class ProposerTester (Messenger):
+
+    node_factory = None 
 
     def setUp(self):
         super(ProposerTester, self).setUp()
         
-        self.p = self.Klass(self.messenger, 'uid', 3, 'foo')
+        self.p = self.node_factory(self, 'A', 2)
+        self.proposer_obj = self.p
 
+
+    def set_leader(self):
+        self.p.prepare()
+        self.am('prepare', (1, 'A'))
+        self.p.leader = True
+        self.ae( self.p.proposed_value, None )
+
+
+    def test_set_proposal_no_value_not_leader(self):
+        self.ae( self.p.proposed_value, None )
+        self.p.set_proposal( 'foo' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.an()
+
+        
+    def test_set_proposal_no_value_as_leader(self):
+        self.set_leader()
+        self.p.set_proposal( 'foo' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.am('accept', (1,'A'), 'foo')
+
+
+    def test_set_proposal_with_previous_value(self):
+        self.p.proposed_value = 'foo'
+        self.p.set_proposal( 'bar' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.an()
+        
 
     def test_prepare(self):
+        self.at( not self.p.leader      )
+        self.ae( self.p.node_uid,   'A' )
+        self.ae( self.p.quorum_size, 2  )
         self.p.prepare()
-        self.ae('prepare', (1,'uid'))
-        self.assertTrue( not self.p.leader )
+        self.am('prepare', (1, 'A'))
+        self.at( not self.p.leader )
 
 
     def test_prepare_two(self):
         self.p.prepare()
+        self.am('prepare', (1,'A'))
         self.p.prepare()
-        self.ae('prepare', (2,'uid'))
-
-
-    def test_prepare_external(self):
-        self.p.recv_promise( 'a', (5,'ext'), None, None )
-        self.p.prepare()
-        self.ae('prepare', (6,'uid'))
-
-    def test_promise_empty(self):
-        self.p.prepare()
-        self.assertTrue( not self.p.leader )
-        self.p.recv_promise( 'a', (1,'uid'), None, None )
-        self.assertTrue( not self.p.leader )
-        self.ae('accept', None)
-        self.p.recv_promise( 'b', (1,'uid'), None, None )
-        self.assertTrue( not self.p.leader )
-        self.ae('lacq', None)
-        self.ae('accept', None)
-        self.p.recv_promise( 'c', (1,'uid'), None, None )
-        self.ae('accept', ((1,'uid'), 'foo'))
-        self.assertTrue( self.p.leader )
-        self.ae('lacq', True)
-
-    def test_promise_ignore(self):
-        self.p.prepare()
-        self.p.recv_promise( 'a', (1,'uid'), None, None )
-        self.ae('accept', None)
-        self.p.recv_promise( 'b', (1,'uid'), None, None )
-        self.ae('accept', None)
-        self.p.recv_promise( 'c', (2,'uid'), None, None )
-        self.ae('accept', None)
-
-    def test_promise_single(self):
-        self.p.prepare()
-        self.p.prepare()
-        self.p.recv_promise( 'a', (2,'uid'), None, None )
-        self.ae('accept', None)
-        self.p.recv_promise( 'b', (2,'uid'), 1,    'bar')
-        self.ae('accept', None)
-        self.p.recv_promise( 'c', (2,'uid'), None, None )
-        self.ae('accept', ((2,'uid'), 'bar'))
-
-    def test_promise_multi(self):
-        self.p.recv_promise( 'a', (5,'other'), None, None )
-        self.p.prepare()
-        self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'c', (6,'uid'), 2, 'def' )
-        self.ae('accept', ((6,'uid'), 'bar') )
-
-    def test_promise_duplicate(self):
-        self.p.recv_promise( 'a', (5,'other'), None, None )
-        self.p.prepare()
-        self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'c', (6,'uid'), 2, 'def' )
-        self.ae('accept', ((6,'uid'), 'bar') )
-
-    def test_promise_old(self):
-        self.p.recv_promise( 'a', (5,'other'), None, None )
-        self.p.prepare()
-        self.p.recv_promise( 'a', (6,'uid'), 1, 'abc' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'b', (6,'uid'), 3, 'bar' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'c', (5,'other'), 4, 'baz' )
-        self.ae('accept', None )
-        self.p.recv_promise( 'd', (6,'uid'), 2, 'def' )
-        self.ae('accept', ((6,'uid'), 'bar') )
-
-
-
-class AcceptorTester (MTester):
-
-    Klass = None
-
-    def setUp(self):
-        super(AcceptorTester, self).setUp()
-        self.a = self.Klass(self.messenger, 'uid', 3)
-
-    def p(self, x):
-        self.ae('promise', x)
-
-    def r(self, x):
-        self.ae('accepted', x)
-
-    def test_first(self):
-        self.a.recv_prepare('AUID',1)
-        self.p( ('AUID', 1, None,None) )
-        
-
-    def test_no_value_two(self):
-        self.a.recv_prepare('AUID',1)
-        self.a.recv_prepare('AUID',2)
-        self.p( ('AUID', 2, 1, None) )
-
-    def test_no_value_ignore_old(self):
-        self.a.recv_prepare('AUID',2)
-        self.p( ('AUID', 2, None, None) )
-        self.a.recv_prepare('AUID',1)
-        self.p( None )
-
-    def test_value_two(self):
-        self.a.recv_prepare('AUID',1)
-        self.p( ('AUID', 1, None, None) )
-        self.a.recv_accept_request('AUID', 1, 'foo')
-        self.a.recv_prepare('AUID',2)
-        self.p( ('AUID', 2, 1, 'foo') )
-        self.r( ('AUID', 1, 'foo') )
-
-    def test_value_ignore_old(self):
-        self.a.recv_prepare('AUID', 2)
-        self.p( ('AUID', 2, None, None) )
-        self.a.recv_accept_request('AUID', 2, 'foo')
-        self.r( ('AUID', 2, 'foo') )
-        self.a.recv_prepare('AUID', 1)
-        self.p( None )
-        self.r( None )
-
-    def test_prepared_accept(self):
-        self.a.recv_prepare('AUID',1)
-        self.a.recv_accept_request('AUID', 1, 'foo')
-        self.r( ('AUID', 1,'foo'))
-
-    def test_unprepared_accept(self):
-        self.a.recv_accept_request('AUID', 1, 'foo')
-        self.r( ('AUID', 1,'foo'))
-
-    def test_ignored_accept(self):
-        self.a.recv_prepare('AUID',5)
-        self.a.recv_accept_request('AUID', 1, 'foo')
-        self.r(None)
-
-    def test_duplicate_accept(self):
-        self.a.recv_accept_request('AUID', 1, 'foo')
-        self.r(('AUID', 1,'foo'))
-        self.a.recv_accept_request('AUID', 1, 'foo')
-        self.r(('AUID', 1,'foo'))
-
-    def test_ignore_after_accept(self):
-        self.a.recv_accept_request('AUID', 5, 'foo')
-        self.r( ('AUID', 5, 'foo') )
-        self.a.recv_prepare('AUID',1)
-        self.r( None )
-
-    
-class LearnerTester (MTester):
-
-    Klass = None
-
-    def setUp(self):
-        super(LearnerTester, self).setUp()
-        self.l = self.Klass(self.messenger, 'uid', 3)
-
-    def v(self, ignore, x):
-        self.assertEquals( self.l.final_value, x )
-
-    def test_one(self):
-        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
-
-    def test_two(self):
-        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None )
-
-    def test_three(self):
-        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
-
-    def test_three(self):
-        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
-
-    def test_duplicates(self):
-        self.v( self.l.recv_accepted(1, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'foo'), None  )
-        self.v( self.l.recv_accepted(3, (1,'1'), 'foo'), 'foo' )
-
-    def test_ignore_one(self):
-        self.v( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-        self.v( self.l.recv_accepted(3, (1,'1'), 'bar'), None  )
-        self.v( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
-
-    def test_ignore_old(self):
-        self.v( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (1,'1'), 'bar'), None  )
-        self.v( self.l.recv_accepted(4, (2,'2'), 'foo'), 'foo' )
-
-    def test_override_old(self):
-        self.v( self.l.recv_accepted(1, (1,'1'), 'bar'), None  )
-        self.v( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-        self.v( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-        self.v( self.l.recv_accepted(3, (2,'2'), 'foo'), 'foo' )
-
-    #def test_ignore_done(self):
-    #    self.assertEquals( self.l.recv_accepted(1, (2,'2'), 'foo'), None  )
-    #    self.assertEquals( self.l.recv_accepted(2, (2,'2'), 'foo'), None  )
-    #    self.assertEquals( self.l.recv_accepted(3, (2,'2'), 'foo'), 'foo' )
-    #    self.assertEquals( self.l.recv_accepted(1, (3,'3'), 'foo'), 'foo' )
-    
-
+        self.am('prepare', (2,'A'))
 
         
+    def test_prepare_with_promises_rcvd(self):
+        self.p.prepare()
+        self.am('prepare', (1, 'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise('B', (1,'A'), None, None)
+        self.ae( len(self.p.promises_rcvd), 1 )
+        self.p.prepare()
+        self.am('prepare', (2,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+
+        
+    def test_prepare_increment_on_foriegn_promise(self):
+        self.p.recv_promise('B', (5,'C'), None, None)
+        self.p.prepare()
+        self.am('prepare', (6,'A'))
+
+
+    def test_preare_no_increment(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise('B', (1,'A'), None, None)
+        self.ae( len(self.p.promises_rcvd), 1 )
+        self.p.prepare(False)
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 1 )
+
+
+    def test_observe_proposal(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.p.observe_proposal( 'B', (5,'B') )
+        self.p.prepare()
+        self.am('prepare', (6,'A'))
+
+
+    def test_resend_accept(self):
+        self.p.resend_accept()
+        self.an()
+        self.set_leader()
+        self.p.resend_accept()
+        self.an()
+        self.p.set_proposal( 'foo' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.am('accept', (1,'A'), 'foo')
+        self.p.resend_accept()
+        self.am('accept', (1,'A'), 'foo')
+        
+
+    def test_recv_promise_ignore_other_nodes(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise( 'B', (1,'B'), None, None )
+        self.ae( len(self.p.promises_rcvd), 0 )
+
+        
+    def test_recv_promise_ignore_when_leader(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.leader = True
+        self.p.recv_promise( 'B', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 0 )
+
+        
+    def test_recv_promise_ignore_duplicate_response(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise( 'B', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 1 )
+        self.p.recv_promise( 'B', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 1 )
+
+
+    def test_recv_promise_set_proposal_from_null(self):
+        self.p.observe_proposal('B', (1,'B'))
+        self.p.prepare()
+        self.am('prepare', (2,'A'))
+        self.ae( self.p.last_accepted_id, None )
+        self.ae( self.p.proposed_value, None )
+        self.p.recv_promise( 'B', (2,'A'), (1,'B'), 'foo' )
+        self.ae( self.p.last_accepted_id, (1,'B') )
+        self.ae( self.p.proposed_value, 'foo' )
+
+        
+    def test_recv_promise_override_previous_proposal_value(self):
+        self.p.observe_proposal('B', (3,'B'))
+        self.p.prepare()
+        self.am('prepare', (4,'A'))
+        self.p.last_accepted_id = (1,'B')
+        self.p.proposed_value   = 'foo'
+        self.p.recv_promise( 'B', (4,'A'), (3,'B'), 'foo' )
+        self.ae( self.p.last_accepted_id, (3,'B') )
+        self.ae( self.p.proposed_value, 'foo' )
+
+
+    def test_recv_promise_acquire_leadership_with_proposal(self):
+        self.p.set_proposal('foo')
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise( 'B', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 1 )
+        self.at(not self.p.leader)
+        self.at(not self.leader_acquired)
+        self.p.recv_promise( 'C', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 2 )
+        self.at(self.p.leader)
+        self.at(self.leader_acquired)
+        self.am('accept', (1,'A'), 'foo')
+
+
+    def test_recv_promise_acquire_leadership_without_proposal(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise( 'B', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 1 )
+        self.at(not self.p.leader)
+        self.at(not self.leader_acquired)
+        self.p.recv_promise( 'C', (1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 2 )
+        self.at(self.p.leader)
+        self.at(self.leader_acquired)
+        self.an()
+
+
+
 class NodeProposerTest(ProposerTester, unittest.TestCase):
-    Klass = node.Node
-
-class NodeAcceptorTest(AcceptorTester, unittest.TestCase):
-    Klass = node.Node
-
-class NodeLearnerTest(LearnerTester, unittest.TestCase):
-    Klass = node.Node
+    node_factory = node.Node
