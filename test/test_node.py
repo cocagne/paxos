@@ -1,6 +1,7 @@
 import sys
 import itertools
 import os.path
+import pickle
 
 #from twisted.trial import unittest
 import unittest
@@ -14,8 +15,6 @@ class Messenger (object):
     leader_acquired = False
     resolution      = None
 
-    proposer_obj = None
-
     def setUp(self):
         self._msgs = list()
 
@@ -28,14 +27,14 @@ class Messenger (object):
     def send_promise(self, to_uid, proposal_id, proposal_value, accepted_value):
         self._append('promise', to_uid, proposal_id, proposal_value, accepted_value)
         
-    def send_prepare_nack(self, propser_obj, to_uid, proposal_id):
-        self._append('prepare_nack', to_uid, proposal_id)
+    def send_prepare_nack(self, to_uid, proposal_id, promised_id):
+        self._append('prepare_nack', to_uid, proposal_id, promised_id)
 
     def send_accept(self, proposal_id, proposal_value):
         self._append('accept', proposal_id, proposal_value)
 
-    def send_accept_nack(self, to_uid, proposal_id):
-        self._append('accept_nack', to_uid, proposal_id)
+    def send_accept_nack(self, to_uid, proposal_id, promised_id):
+        self._append('accept_nack', to_uid, proposal_id, promised_id)
 
     def send_accepted(self, to_uid, proposal_id, accepted_value):
         self._append('accepted', to_uid, proposal_id, accepted_value)
@@ -86,7 +85,6 @@ class ProposerTester (Messenger):
         super(ProposerTester, self).setUp()
         
         self.p = self.node_factory(self, 'A', 2)
-        self.proposer_obj = self.p
 
 
     def set_leader(self):
@@ -165,6 +163,14 @@ class ProposerTester (Messenger):
         self.p.prepare()
         self.am('prepare', (1,'A'))
         self.p.observe_proposal( 'B', (5,'B') )
+        self.p.prepare()
+        self.am('prepare', (6,'A'))
+
+
+    def test_recv_prepare_nack(self):
+        self.p.prepare()
+        self.am('prepare', (1,'A'))
+        self.p.recv_prepare_nack( 'B', (1,'A'), (5,'B') )
         self.p.prepare()
         self.am('prepare', (6,'A'))
 
@@ -263,5 +269,181 @@ class ProposerTester (Messenger):
 
 
 
+class AcceptorTester (Messenger):
+
+    node_factory = None 
+
+    def setUp(self):
+        super(AcceptorTester, self).setUp()
+        
+        self.a = self.node_factory(self, 'A', 2)
+
+
+    def test_recv_prepare_initial(self):
+        self.ae( self.a.promised_id    , None)
+        self.ae( self.a.accepted_value , None)
+        self.ae( self.a.accepted_id    , None)
+        self.ae( self.a.previous_id    , None)
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('promise', 'A', (1,'A'), None, None)
+
+        
+    def test_recv_prepare_duplicate(self):
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('promise', 'A', (1,'A'), None, None)
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('promise', 'A', (1,'A'), None, None)
+
+        
+    def test_recv_prepare_override(self):
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('promise', 'A', (1,'A'), None, None)
+        self.a.recv_accept_request('A', (1,'A'), 'foo')
+        self.clear_msgs()
+        self.a.recv_prepare( 'B', (2,'B') )
+        self.am('promise', 'B', (2,'B'), (1,'A'), 'foo')
+
+        
+    def test_recv_prepare_nack(self):
+        self.a.recv_prepare( 'A', (2,'A') )
+        self.am('promise', 'A', (2,'A'), None, None)
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('prepare_nack', 'A', (1,'A'), (2,'A'))
+
+
+    def test_recv_accept_request_initial(self):
+        self.a.recv_accept_request('A', (1,'A'), 'foo')
+        self.am('accepted', 'A', (1,'A'), 'foo')
+
+        
+    def test_recv_accept_request_promised(self):
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('promise', 'A', (1,'A'), None, None)
+        self.a.recv_accept_request('A', (1,'A'), 'foo')
+        self.am('accepted', 'A', (1,'A'), 'foo')
+
+        
+    def test_recv_accept_request_greater_than_promised(self):
+        self.a.recv_prepare( 'A', (1,'A') )
+        self.am('promise', 'A', (1,'A'), None, None)
+        self.a.recv_accept_request('A', (5,'A'), 'foo')
+        self.am('accepted', 'A', (5,'A'), 'foo')
+
+
+    def test_recv_accept_request_less_than_promised(self):
+        self.a.recv_prepare( 'A', (5,'A') )
+        self.am('promise', 'A', (5,'A'), None, None)
+        self.a.recv_accept_request('A', (1,'A'), 'foo')
+        self.am('accept_nack', 'A', (1,'A'), (5,'A'))
+
+
+
+class LearnerTester (Messenger):
+
+    node_factory = None 
+
+    def setUp(self):
+        super(LearnerTester, self).setUp()
+        
+        self.l = self.node_factory(self, 'A', 2)
+
+    def test_basic_resolution(self):
+        self.ae( self.l.quorum_size,       2    )
+        self.ae( self.l.final_value,       None )
+        self.ae( self.l.final_proposal_id, None )
+
+        self.l.recv_accepted( 'A', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'B', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, 'foo' )
+        self.ae( self.l.final_proposal_id, (1,'A') )
+
+
+    def test_ignore_after_resolution(self):
+        self.l.recv_accepted( 'A', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, None )
+        self.at( not self.l.complete )
+        self.l.recv_accepted( 'B', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, 'foo' )
+        self.ae( self.l.final_proposal_id, (1,'A') )
+
+        self.l.recv_accepted( 'A', (5,'A'), 'bar' )
+        self.l.recv_accepted( 'B', (5,'A'), 'bar' )
+        self.ae( self.l.final_value, 'foo' )
+        self.ae( self.l.final_proposal_id, (1,'A') )
+        
+
+
+    def test_ignore_duplicate_messages(self):
+        self.l.recv_accepted( 'A', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'A', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'B', (1,'A'), 'foo' )
+        self.ae( self.l.final_value, 'foo' )
+        self.ae( self.l.final_proposal_id, (1,'A') )
+
+        
+    def test_ignore_old_messages(self):
+        self.l.recv_accepted( 'A', (5,'A'), 'foo' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'A', (1,'A'), 'bar' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'B', (5,'A'), 'foo' )
+        self.ae( self.l.final_value, 'foo' )
+        self.ae( self.l.final_proposal_id, (5,'A') )
+
+
+    def test_overwrite_old_messages(self):
+        self.l.recv_accepted( 'A', (1,'A'), 'bar' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'B', (5,'A'), 'foo' )
+        self.ae( self.l.final_value, None )
+        self.l.recv_accepted( 'A', (5,'A'), 'foo' )
+        self.ae( self.l.final_value, 'foo' )
+        self.ae( self.l.final_proposal_id, (5,'A') )
+
+
+class NodeTester(Messenger, unittest.TestCase):
+
+    def test_durability(self):
+        n = node.Node(self, 'A', 2)
+
+        n.prepare()
+        n.recv_prepare( 'A', (2,'A') )
+        n.recv_accept_request( 'A', (2,'A'), 'foo' )
+        n.recv_accepted( 'A', (2,'A'), 'foo' )
+
+        self.clear_msgs()
+        
+        n2 = pickle.loads( pickle.dumps(n) )
+        n2.recover(self)
+
+        n2.prepare()
+        self.am('prepare', (2,'A'))
+
+        n2.recv_accept_request( 'A', (1,'A'), 'blah' )
+        self.am('accept_nack', 'A', (1,'A'), (2,'A'))
+
+        self.at( not n2.complete )
+        n2.recv_accepted( 'B', (2,'A'), 'foo' )
+
+        self.at( n2.complete )
+
+
+    def test_change_quorum_size(self):
+        n = node.Node(self, 'A', 2)
+        self.ae(n.quorum_size, 2)
+        n.change_quorum_size(3)
+        self.ae(n.quorum_size, 3)
+        
+
+
 class NodeProposerTest(ProposerTester, unittest.TestCase):
+    node_factory = node.Node
+
+class NodeAcceptorTest(AcceptorTester, unittest.TestCase):
+    node_factory = node.Node
+
+class NodeLearnerTest(LearnerTester, unittest.TestCase):
     node_factory = node.Node

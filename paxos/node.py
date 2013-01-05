@@ -76,7 +76,7 @@ class Proposer (object):
                 self.messenger.send_accept( self.proposal_id, value )
 
 
-    def prepare(self, increment_proposal_number = True):
+    def prepare(self, increment_proposal_number=True):
         '''
         Creates a new proposal id that is higher than any previously seen proposal id
         if the default argument is True. Otherwise it resends the previous proposal.
@@ -104,10 +104,11 @@ class Proposer (object):
                 self.next_proposal_number = proposal_id[0] + 1
 
             
-    def recv_prepare_nack(self, from_uid, proposal_id):
+    def recv_prepare_nack(self, from_uid, proposal_id, promised_id):
         '''
         Called when an explicit NACK is sent in response to a prepare message.
         '''
+        self.observe_proposal( from_uid, promised_id )
 
     
     def recv_accept_nack(self, from_uid, proposal_id, promised_id):
@@ -174,15 +175,12 @@ class Acceptor (object):
 
                     
     def recv_accept_request(self, from_uid, proposal_id, value):
-        '''
-        Returns: None on request denied. (proposal_id, accepted_value) on accepted
-        '''
         if proposal_id >= self.promised_id:
             self.accepted_value  = value
             self.promised_id     = proposal_id
             self.messenger.send_accepted(from_uid, proposal_id, self.accepted_value)
         else:
-            self.messenger.send_accept_nack(from_uid, self.promised_id)
+            self.messenger.send_accept_nack(from_uid, proposal_id, self.promised_id)
         
 
 
@@ -253,21 +251,16 @@ class Node (Proposer, Acceptor, Learner):
     all three Paxos roles, Proposer, Acceptor, and Learner.
     '''
 
-    def __init__(self, messenger, node_uid, quorum_size, proposed_value=None):
+    def __init__(self, messenger, node_uid, quorum_size):
         self.messenger   = messenger
         self.node_uid    = node_uid
         self.quorum_size = quorum_size
-
-        if proposed_value is not None:
-            self.set_proposal( proposed_value )
             
 
-            
     def __getstate__(self):
         pstate = dict( self.__dict__ )
         del pstate['messenger']
         return pstate
-
 
     
     def recover(self, messenger):
@@ -277,11 +270,9 @@ class Node (Proposer, Acceptor, Learner):
         '''
         self.messenger = messenger
 
-
         
     def change_quorum_size(self, quorum_size):
         self.quorum_size = quorum_size
-
 
         
     def recv_prepare(self, from_uid, proposal_id):
