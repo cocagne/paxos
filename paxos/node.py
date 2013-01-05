@@ -18,7 +18,7 @@ class Messenger (object):
         Sends a Promise message
         '''
 
-    def send_prepare_nack(self, propser_obj, to_uid, proposal_id):
+    def send_prepare_nack(self, propser_obj, to_uid, proposal_id, promised_id):
         '''
         Sends a Prepare Nack message for the proposal
         '''
@@ -63,7 +63,7 @@ class Proposer (object):
     promises_rcvd        = None
     leader               = False
 
-
+    
     def set_proposal(self, value):
         '''
         Sets the proposal value for this node iff this node is not already aware of
@@ -76,7 +76,6 @@ class Proposer (object):
                 self.messenger.send_accept( self, self.proposal_id, value )
 
 
-            
     def prepare(self, increment_proposal_number = True):
         '''
         Creates a new proposal id that is higher than any previously seen proposal id
@@ -93,7 +92,6 @@ class Proposer (object):
 
         self.messenger.send_prepare(self, self.proposal_id)
 
-
     
     def observe_proposal(self, from_uid, proposal_id):
         '''
@@ -105,7 +103,6 @@ class Proposer (object):
             if proposal_id >= (self.next_proposal_number, self.node_uid):
                 self.next_proposal_number = proposal_id[0] + 1
 
-
             
     def recv_prepare_nack(self, from_uid, proposal_id):
         '''
@@ -113,20 +110,17 @@ class Proposer (object):
         '''
 
     
-
     def recv_accept_nack(self, from_uid, proposal_id, promised_id):
         '''
         Called when an explicit NACK is sent in response to an accept message
         '''
 
-
-    
+        
     def resend_accept(self):
         if self.leader and self.proposed_value:
             self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
 
 
-            
     def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
         '''
         from_uid - Needed to ensure duplicate messages from nodes are ignored
@@ -163,18 +157,22 @@ class Acceptor (object):
     accepted_value = None
     accepted_id    = None
     previous_id    = None
-    
+
+
     def recv_prepare(self, from_uid, proposal_id):
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
             self.messenger.send_promise(self, from_uid, proposal_id, self.previous_id, self.accepted_value)
         
-        if proposal_id > self.promised_id:
+        elif proposal_id > self.promised_id:
             self.previous_id = self.promised_id            
             self.promised_id = proposal_id
             self.messenger.send_promise(self, from_uid, proposal_id, self.previous_id, self.accepted_value)
 
-        
+        else:
+            self.messenger.send_prepare_nack(self, from_uid, proposal_id, self.promised_id)
+
+                    
     def recv_accept_request(self, from_uid, proposal_id, value):
         '''
         Returns: None on request denied. (proposal_id, accepted_value) on accepted
