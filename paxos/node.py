@@ -8,12 +8,12 @@ such things as timeouts, retransmits, and liveness-detectors.
 
 
 class Messenger (object):
-    def send_prepare(self, proposer_obj, proposal_id):
+    def send_prepare(self, proposal_id):
         '''
         Sends a Prepare message
         '''
 
-    def send_promise(self, proposer_obj, to_uid, proposal_id, previous_id, accepted_value):
+    def send_promise(self, to_uid, proposal_id, previous_id, accepted_value):
         '''
         Sends a Promise message
         '''
@@ -23,27 +23,27 @@ class Messenger (object):
         Sends a Prepare Nack message for the proposal
         '''
 
-    def send_accept(self, proposer_obj, proposal_id, proposal_value):
+    def send_accept(self, proposal_id, proposal_value):
         '''
         Sends an Accept! message
         '''
 
-    def send_accept_nack(self, proposer_obj, to_uid, proposal_id, promised_id):
+    def send_accept_nack(self, to_uid, proposal_id, promised_id):
         '''
         Sends a Accept! Nack message for the proposal
         '''
 
-    def send_accepted(self, proposer_obj, to_uid, proposal_id, accepted_value):
+    def send_accepted(self, to_uid, proposal_id, accepted_value):
         '''
         Sends an Accepted message
         '''
 
-    def on_leadership_acquired(self, proposer_obj):
+    def on_leadership_acquired(self):
         '''
         Called when leadership has been aquired
         '''
 
-    def on_resolution(self, proposer_obj, proposal_id, value):
+    def on_resolution(self, proposal_id, value):
         '''
         Called when a resolution is reached
         '''
@@ -73,7 +73,7 @@ class Proposer (object):
             self.proposed_value = value
 
             if self.leader:
-                self.messenger.send_accept( self, self.proposal_id, value )
+                self.messenger.send_accept( self.proposal_id, value )
 
 
     def prepare(self, increment_proposal_number = True):
@@ -90,7 +90,7 @@ class Proposer (object):
         
             self.next_proposal_number += 1
 
-        self.messenger.send_prepare(self, self.proposal_id)
+        self.messenger.send_prepare(self.proposal_id)
 
     
     def observe_proposal(self, from_uid, proposal_id):
@@ -118,7 +118,7 @@ class Proposer (object):
         
     def resend_accept(self):
         if self.leader and self.proposed_value:
-            self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
+            self.messenger.send_accept(self.proposal_id, self.proposed_value)
 
 
     def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
@@ -140,10 +140,10 @@ class Proposer (object):
         if len(self.promises_rcvd) == self.quorum_size:
             self.leader = True
 
-            self.messenger.on_leadership_acquired(self)
+            self.messenger.on_leadership_acquired()
             
             if self.proposed_value is not None:
-                self.messenger.send_accept(self, self.proposal_id, self.proposed_value)
+                self.messenger.send_accept(self.proposal_id, self.proposed_value)
             
 
 
@@ -162,15 +162,15 @@ class Acceptor (object):
     def recv_prepare(self, from_uid, proposal_id):
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
-            self.messenger.send_promise(self, from_uid, proposal_id, self.previous_id, self.accepted_value)
+            self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
         
         elif proposal_id > self.promised_id:
             self.previous_id = self.promised_id            
             self.promised_id = proposal_id
-            self.messenger.send_promise(self, from_uid, proposal_id, self.previous_id, self.accepted_value)
+            self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
 
         else:
-            self.messenger.send_prepare_nack(self, from_uid, proposal_id, self.promised_id)
+            self.messenger.send_prepare_nack(from_uid, proposal_id, self.promised_id)
 
                     
     def recv_accept_request(self, from_uid, proposal_id, value):
@@ -180,9 +180,9 @@ class Acceptor (object):
         if proposal_id >= self.promised_id:
             self.accepted_value  = value
             self.promised_id     = proposal_id
-            self.messenger.send_accepted(self, from_uid, proposal_id, self.accepted_value)
+            self.messenger.send_accepted(from_uid, proposal_id, self.accepted_value)
         else:
-            self.messenger.send_accept_nack(self, from_uid, self.promised_id)
+            self.messenger.send_accept_nack(from_uid, self.promised_id)
         
 
 
@@ -242,7 +242,7 @@ class Learner (object):
             self.proposals         = None
             self.acceptors         = None
 
-            self.messenger.on_resolution( self, proposal_id, accepted_value )
+            self.messenger.on_resolution( proposal_id, accepted_value )
             
 
 

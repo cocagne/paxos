@@ -19,32 +19,31 @@ class Messenger (object):
     def setUp(self):
         self._msgs = list()
 
-    def _append(self, proposer_obj, *args):
-        self.assertTrue( proposer_obj is self.proposer_obj )
+    def _append(self, *args):
         self._msgs.append(args)
         
-    def send_prepare(self, proposer_obj, proposal_id):
-        self._append(proposer_obj, 'prepare', proposal_id)
+    def send_prepare(self, proposal_id):
+        self._append('prepare', proposal_id)
 
-    def send_promise(self, proposer_obj, to_uid, proposal_id, proposal_value, accepted_value):
-        self._append(proposer_obj, 'promise', to_uid, proposal_id, proposal_value, accepted_value)
+    def send_promise(self, to_uid, proposal_id, proposal_value, accepted_value):
+        self._append('promise', to_uid, proposal_id, proposal_value, accepted_value)
         
     def send_prepare_nack(self, propser_obj, to_uid, proposal_id):
-        self._append(proposer_obj, 'prepare_nack', to_uid, proposal_id)
+        self._append('prepare_nack', to_uid, proposal_id)
 
-    def send_accept(self, proposer_obj, proposal_id, proposal_value):
-        self._append(proposer_obj, 'accept', proposal_id, proposal_value)
+    def send_accept(self, proposal_id, proposal_value):
+        self._append('accept', proposal_id, proposal_value)
 
-    def send_accept_nack(self, proposer_obj, to_uid, proposal_id):
-        self._append(proposer_obj, 'accept_nack', to_uid, proposal_id)
+    def send_accept_nack(self, to_uid, proposal_id):
+        self._append('accept_nack', to_uid, proposal_id)
 
-    def send_accepted(self, proposer_obj, to_uid, proposal_id, accepted_value):
-        self._append(proposer_obj, 'accepted', to_uid, proposal_id, accepted_value)
+    def send_accepted(self, to_uid, proposal_id, accepted_value):
+        self._append('accepted', to_uid, proposal_id, accepted_value)
 
-    def on_leadership_acquired(self, proposer_obj):
+    def on_leadership_acquired(self):
         self.leader_acquired = True
 
-    def on_resolution(self, proposer_obj, proposal_id, value):
+    def on_resolution(self, proposal_id, value):
         self.resolution = (proposal_id, value)
 
     @property
