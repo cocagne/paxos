@@ -13,9 +13,9 @@ class HeartbeatMessenger (node.Messenger):
 
     def schedule(self, msec_delay, func_obj):
         '''
-        Called by pulse() to schedule the next pulse() call while this node has
-        leadership. If this method is not overridden appropriately, subclasses
-        must use the on_leadership_acquired()/on_leadership_lost() callbacks
+        While leadership is held, this method is called by pulse() to schedule
+        the next call to pulse(). If this method is not overridden appropriately, 
+        subclasses must use the on_leadership_acquired()/on_leadership_lost() callbacks
         to ensure that pulse() is called every hb_period while leadership is held.
         '''
 
@@ -26,7 +26,8 @@ class HeartbeatMessenger (node.Messenger):
 
     def on_leadership_change(self, prev_leader_uid, new_leader_uid):
         '''
-        Called when a change in leadership is detected
+        Called when a change in leadership is detected. Either UID may
+        be None.
         '''
 
         
@@ -41,8 +42,8 @@ class HeartbeatNode (node.Node):
     'liveness_window', leadership acquisition will be attempted by sending out
     phase 1a, Prepare messages. If a quorum of replies acknowledging leadership
     is received, the node has successfully gained leadership and will begin
-    sending out heartbeat messages itself. If a quorum is not received, the
-    node will continually resend its proposal every 'liveness_window' until either
+    sending out heartbeat messages. If a quorum is not received, the
+    node will continually send a prepare every 'liveness_window' until either
     a quorum is established or a heartbeat with a proposal number greater than
     its own is seen. The units for hb_period and liveness_window is seconds. Floating
     point values may be used for sub-second precision.
@@ -82,14 +83,7 @@ class HeartbeatNode (node.Node):
             self.proposal_id           = (self.next_proposal_number, self.node_uid)
             self.next_proposal_number += 1
 
-
             
-    @property
-    def current_leader_uid(self):
-        return self.leader_uid 
-
-
-
     def on_recover(self, messenger):
         '''
         Must be called after the instance has been recovered from durable state
@@ -99,12 +93,10 @@ class HeartbeatNode (node.Node):
         self.leader_proposal_id = (1,None)
 
 
-            
     def prepare(self, *args, **kwargs):
         self._nacks.clear()
         return super(HeartbeatNode, self).prepare(*args, **kwargs)
         
-
         
     def leader_is_alive(self):
         return self.timestamp() - self._tlast_hb <= self.liveness_window
@@ -113,7 +105,6 @@ class HeartbeatNode (node.Node):
     def observed_recent_prepare(self):
         return self.timestamp() - self._tlast_prep <= self.liveness_window * 1.5
 
-
     
     def poll_liveness(self):
         '''
@@ -121,10 +112,9 @@ class HeartbeatNode (node.Node):
         '''
         if not self.leader_is_alive() and not self.observed_recent_prepare():
             if self._acquiring:
-                self.prepare(False)
+                self.prepare()
             else:
                 self.acquire_leadership()
-
 
             
     def recv_heartbeat(self, from_uid, proposal_id):
@@ -148,7 +138,6 @@ class HeartbeatNode (node.Node):
         if self.leader_proposal_id == proposal_id:
             self._tlast_hb = self.timestamp()
                 
-
             
     def pulse(self):
         '''
@@ -158,7 +147,6 @@ class HeartbeatNode (node.Node):
             self.recv_heartbeat(self.node_uid, self.proposal_id)
             self.messenger.send_heartbeat(self.proposal_id)
             self.messenger.schedule(self.hb_period, self.pulse)
-
 
             
     def acquire_leadership(self):

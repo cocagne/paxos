@@ -204,7 +204,7 @@ class HeartbeatProposerTester (HMessenger, unittest.TestCase):
         self.assertTrue( self.l.leader_is_alive() )
 
 
-    def test_leader_acquire_timeout_and_retry(self):
+    def test_proposal_id_increment(self):
         self.pre_acq('foo')
 
         self.p()
@@ -214,14 +214,15 @@ class HeartbeatProposerTester (HMessenger, unittest.TestCase):
         self.l.recv_promise('A', (1,'A'), None, None)
         self.l.recv_promise('B', (1,'A'), None, None)
         self.an()
-
-        self.p()
-
-        self.am('prepare', (1,'A'))
-
-        self.l.recv_promise('C', (1,'A'), None, None)
         
-        self.am('accept', (1,'A'), 'foo')
+        self.p()
+        self.am('prepare', (2,'A'))
+
+        self.l.recv_promise('A', (2,'A'), None, None)
+        self.l.recv_promise('B', (2,'A'), None, None)
+        self.l.recv_promise('C', (2,'A'), None, None)
+        
+        self.am('accept', (2,'A'), 'foo')
 
         self.assertEquals( self.tleader, 'gained' )
         

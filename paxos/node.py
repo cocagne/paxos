@@ -10,37 +10,47 @@ such things as timeouts, retransmits, and liveness-detectors.
 class Messenger (object):
     def send_prepare(self, proposal_id):
         '''
-        Sends a Prepare message
+        Broadcasts a Prepare message to all nodes
         '''
 
     def send_promise(self, to_uid, proposal_id, previous_id, accepted_value):
         '''
-        Sends a Promise message
+        Sends a Promise message to the specified node
         '''
 
-    def send_prepare_nack(self, propser_obj, to_uid, proposal_id, promised_id):
+    def send_prepare_nack(self, to_uid, proposal_id, promised_id):
         '''
-        Sends a Prepare Nack message for the proposal
+        Sends a Prepare Nack message for the proposal to the specified node
         '''
 
     def send_accept(self, proposal_id, proposal_value):
         '''
-        Sends an Accept! message
+        Broadcasts an Accept! message to all nodes
         '''
 
     def send_accept_nack(self, to_uid, proposal_id, promised_id):
         '''
-        Sends a Accept! Nack message for the proposal
+        Sends a Accept! Nack message for the proposal to the specified node
         '''
 
     def send_accepted(self, to_uid, proposal_id, accepted_value):
         '''
-        Sends an Accepted message
+        Broadcasts an Accepted message to all nodes
         '''
 
     def on_leadership_acquired(self):
         '''
-        Called when leadership has been aquired
+        Called when leadership has been aquired. This is not a guaranteed
+        position. Another node may assume leadership at any time and it's
+        even possible that another may have successfully done so before this
+        callback is exectued. Use this method with care.
+
+        The safe way to guarantee leadership is to use a full Paxos instance
+        whith the resolution value being the UID of the leader node. To avoid
+        potential issues arising from timing and/or failure, the election
+        result may be restricted to a certain time window. Prior to the end of
+        the window the leader may attempt to re-elect itself to extend it's
+        term in office.
         '''
 
     def on_resolution(self, proposal_id, value):
@@ -57,7 +67,7 @@ class Proposer (object):
     quorum_size          = None
 
     proposed_value       = None
-    proposal_id          = None
+    proposal_id          = None # tuple of (proposal_number, node_uid)
     last_accepted_id     = None
     next_proposal_number = 1
     promises_rcvd        = None
@@ -78,8 +88,11 @@ class Proposer (object):
 
     def prepare(self, increment_proposal_number=True):
         '''
-        Creates a new proposal id that is higher than any previously seen proposal id
-        if the default argument is True. Otherwise it resends the previous proposal.
+        Sends a prepare request to all nodes as the first step in attempting to
+        acquire leadership of the Paxos instance. If the default argument is True,
+        the proposal id will be set higher than that of any previous observed
+        proposal id. Otherwise the previously used proposal id will simply be
+        retransmitted.
         
         The proposal id is a tuple of (proposal_numer, node_uid)
         '''
@@ -118,13 +131,17 @@ class Proposer (object):
 
         
     def resend_accept(self):
+        '''
+        Retransmits an Accept! message iff this node is the leader and has
+        a proposal value
+        '''
         if self.leader and self.proposed_value:
             self.messenger.send_accept(self.proposal_id, self.proposed_value)
 
 
     def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
         '''
-        from_uid - Needed to ensure duplicate messages from nodes are ignored
+        Called when a Promise message is received from the network
         '''
         if proposal_id > (self.next_proposal_number-1, self.node_uid):
             self.next_proposal_number = proposal_id[0] + 1
@@ -164,6 +181,9 @@ class Acceptor (object):
 
 
     def recv_prepare(self, from_uid, proposal_id):
+        '''
+        Called when a Prepare message is received from the network
+        '''
         if proposal_id == self.promised_id:
             # Duplicate accepted proposal
             self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
@@ -178,6 +198,9 @@ class Acceptor (object):
 
                     
     def recv_accept_request(self, from_uid, proposal_id, value):
+        '''
+        Called when an Accept! message is received from the network
+        '''
         if proposal_id >= self.promised_id:
             self.accepted_value  = value
             self.promised_id     = proposal_id
@@ -205,7 +228,7 @@ class Learner (object):
 
     def recv_accepted(self, from_uid, proposal_id, accepted_value):
         '''
-        Only messages from valid acceptors may result in calling this function.
+        Called when an Accepted message is received from the network.
         '''
         if self.final_value is not None:
             return # already done
@@ -245,7 +268,6 @@ class Learner (object):
 
             self.messenger.on_resolution( proposal_id, accepted_value )
             
-
 
     
 class Node (Proposer, Acceptor, Learner):
