@@ -6,12 +6,12 @@ from paxos import node
 
 class HeartbeatMessenger (node.Messenger):
 
-    def send_heartbeat(self, node_obj, leader_proposal_id):
+    def send_heartbeat(self, leader_proposal_id):
         '''
         Sends a heartbeat message to all nodes
         '''
 
-    def schedule(self, node_obj,  msec_delay, func_obj):
+    def schedule(self, msec_delay, func_obj):
         '''
         Called by pulse() to schedule the next pulse() call while this node has
         leadership. If this method is not overridden appropriately, subclasses
@@ -19,12 +19,12 @@ class HeartbeatMessenger (node.Messenger):
         to ensure that pulse() is called every hb_period while leadership is held.
         '''
 
-    def on_leadership_lost(self, node_obj):
+    def on_leadership_lost(self):
         '''
         Called when loss of leadership is detected
         '''
 
-    def on_leadership_change(self, node_obj, prev_leader_uid, new_leader_uid):
+    def on_leadership_change(self, prev_leader_uid, new_leader_uid):
         '''
         Called when a change in leadership is detected
         '''
@@ -62,10 +62,10 @@ class HeartbeatNode (node.Node):
     timestamp       = time.time
 
     
-    def __init__(self, messenger, my_uid, quorum_size, proposed_value=None, leader_uid=None,
+    def __init__(self, messenger, my_uid, quorum_size, leader_uid=None,
                  hb_period=None, liveness_window=None):
         
-        super(HeartbeatNode, self).__init__(messenger, my_uid, quorum_size, proposed_value)
+        super(HeartbeatNode, self).__init__(messenger, my_uid, quorum_size)
 
         self.leader_uid          = leader_uid
         self.leader_proposal_id  = (1, leader_uid)
@@ -140,10 +140,10 @@ class HeartbeatNode (node.Node):
 
             if self.leader and from_uid != self.node_uid:
                 self.leader = False
-                self.messenger.on_leadership_lost(self)
+                self.messenger.on_leadership_lost()
                 self.observe_proposal( from_uid, proposal_id )
 
-            self.messenger.on_leadership_change( self, old_leader_uid, from_uid )
+            self.messenger.on_leadership_change( old_leader_uid, from_uid )
 
         if self.leader_proposal_id == proposal_id:
             self._tlast_hb = self.timestamp()
@@ -156,8 +156,8 @@ class HeartbeatNode (node.Node):
         '''
         if self.leader:
             self.recv_heartbeat(self.node_uid, self.proposal_id)
-            self.messenger.send_heartbeat(self, self.proposal_id)
-            self.messenger.schedule(self, self.hb_period, self.pulse)
+            self.messenger.send_heartbeat(self.proposal_id)
+            self.messenger.schedule(self.hb_period, self.pulse)
 
 
             
@@ -189,13 +189,12 @@ class HeartbeatNode (node.Node):
             self.leader_proposal_id = self.proposal_id
             self._acquiring         = False
             self.pulse()
-            self.messenger.on_leadership_change( self, old_leader_uid, self.node_uid )
-
+            self.messenger.on_leadership_change( old_leader_uid, self.node_uid )
 
             
-    def recv_prepare_nack(self, from_uid, proposal_id):
+    def recv_prepare_nack(self, from_uid, proposal_id, promised_id):
+        super(HeartbeatNode, self).recv_prepare_nack(from_uid, proposal_id, promised_id)
         if self._acquiring:
-            self.observe_proposal( from_uid, proposal_id )
             self.prepare()
 
 
@@ -208,8 +207,8 @@ class HeartbeatNode (node.Node):
             self.promises_rcvd      = set()
             self.leader_uid         = None
             self.leader_proposal_id = None
-            self.messenger.on_leadership_lost(self)
-            self.messenger.on_leadership_change(self, self.node_uid, None)
+            self.messenger.on_leadership_lost()
+            self.messenger.on_leadership_change(self.node_uid, None)
             self.observe_proposal( from_uid, promised_id )
 
 

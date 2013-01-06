@@ -12,12 +12,9 @@ from paxos import heartbeat
 import test_node
 
 
-PVALUE = 99 # arbitrary value for proposal
-
-
-class HMessenger (test_node.TMessenger):
+class HMessenger (test_node.Messenger):
         
-    def __init__(self):
+    def msetup(self):
         self.t = 1
         self.q = []
         self.cp     = 0
@@ -39,33 +36,22 @@ class HMessenger (test_node.TMessenger):
     def timestamp(self):
         return self.t
 
-    def schedule(self, po, when, func_obj):
+    def schedule(self, when, func_obj):
         whence = when + self.timestamp()
         heapq.heappush(self.q, (when + self.timestamp(), func_obj))
 
-
-    def send_prepare(self, po, pnum):
-        self.cp = pnum
-        self.pcount += 1
-        super(HMessenger, self).send_prepare(po, pnum)
-
-    def send_heartbeat(self, po, pnum):
+    def send_heartbeat(self, pnum):
         self.hb = pnum
         self.hbcount += 1
 
-    def send_accept(self, po, pnum, value):
-        self.ap = pnum
-        self.acount += 1
-        self.avalue = value
-        super(HMessenger, self).send_accept(po, pnum, value)
-
-    def on_leadership_acquired(self, po):
+    def on_leadership_acquired(self):
+        super(HMessenger,self).on_leadership_acquired()
         self.tleader = 'gained'
 
-    def on_leadership_lost(self, po):
+    def on_leadership_lost(self):
         self.tleader = 'lost'
 
-    def on_leadership_change(self, po, old_uid, new_uid):
+    def on_leadership_change(self, old_uid, new_uid):
         pass
         
 
@@ -79,209 +65,163 @@ class HNode(heartbeat.HeartbeatNode):
         super(HNode,self).__init__(messenger, *args)
 
         
-class HeartbeatProposerTester (unittest.TestCase):
+        
+class HeartbeatProposerTester (HMessenger, unittest.TestCase):
 
     
     def setUp(self):
-        self.m = HMessenger()
-        self.l = HNode(self.m, 'uid', 3, PVALUE)
-        
+        super(HeartbeatProposerTester,self).setUp()
+        self.msetup()
+        self.l = HNode(self, 'A', 3)
 
-    def ame(self, attr_name, expected):
-        self.assertEquals( getattr(self.m, attr_name), expected )
-        
         
     def p(self):
-        self.m.tadvance(1)
+        self.tadvance(1)
         self.l.poll_liveness()
 
         
-    def test_initial_wait(self):
+    def pre_acq(self, value=None):
+        if value:
+            self.l.set_proposal(value)
+            
         for i in range(1,10):
             self.p()
             self.assertEquals( self.l.proposal_id, None )
+
+        self.an()
+
+        
+    def test_initial_wait(self):
+        self.pre_acq()
             
         self.p()
         
-        self.assertEquals( self.l.proposal_id, (1,'uid') )
+        self.assertEquals( self.l.proposal_id, (1,'A') )
 
 
     def test_initial_leader(self):
-        self.l.leader_proposal_id = (1, 'other')
-        
-        for i in range(1,10):
-            self.p()
-            self.assertEquals( self.l.proposal_id, None )
+        self.l.leader_proposal_id = (1, 'B')
 
-        self.l.recv_heartbeat('other', (1,'other'))
+        self.pre_acq()
+
+        # test_initial_wait() shows that the next call to p() will
+        # result in the node attempting to assume leadership by
+        # generating a new proposal_id. Reception of this heartbeat
+        # should reset the liveness timer and suppress the coup attempt.
+        self.l.recv_heartbeat('B', (1,'B'))
         
         self.p()
         self.assertEquals( self.l.proposal_id, None )
 
         
     def test_gain_leader(self):
-        for i in range(1,10):
-            self.p()
-
-        self.assertEquals( self.m.pcount, 0 )
-        self.assertEquals( self.m.cp,     0 )
-        self.p()
-        self.assertEquals( self.m.pcount, 1 )
-        self.assertEquals( self.m.cp,     (1, 'uid') )
-
-        self.l.recv_promise(2, (1,'uid'), None, None)
-        self.ame('accept', None)
-        self.l.recv_promise(3, (1,'uid'), None, None)
-        self.ame('accept', None)
-        self.l.recv_promise(4, (1,'uid'), None, None)
-        self.ame('accept', ((1,'uid'), PVALUE))
-
-        self.assertEquals( self.m.tleader, 'gained' )
-
-
-    def XXXtest_leader_acquire_rejected(self):
-        for i in range(1,10):
-            self.p()
-
-
-        self.assertEquals( self.l.pcount, 0 )
-        self.assertEquals( self.l.cp,     0 )
-        self.p()
-        self.assertEquals( self.l.pcount, 1 )
-        self.assertEquals( self.l.cp,     (1,'uid') )
-
-        self.assertEquals(self.l.recv_promise(2, (1,'uid'), None, None), None)
-        self.assertEquals(self.l.recv_promise(3, (1,'uid'), None, None), None)
-
-        self.l.recv_proposal_rejected(2, (5,'other'))
+        self.pre_acq('foo')
         
-        self.assertEquals(self.l.recv_promise(4, (1,'uid'), None, None), ((1,'uid'), PVALUE))
-
-        self.assertEquals( self.l.tleader, None )
-
-
-    def test_ignore_old_leader_acquire_rejected(self):
-        for i in range(1,10):
-            self.p()
-
-        self.assertEquals( self.m.pcount, 0 )
-        self.assertEquals( self.m.cp,     0 )
         self.p()
-        self.assertEquals( self.m.pcount, 1 )
-        self.assertEquals( self.m.cp,     (1,'uid') )
 
-        self.l.recv_promise(2, (1,'uid'), None, None)
-        self.ame('accept', None)
-        self.l.recv_promise(3, (1,'uid'), None, None)
-        self.ame('accept', None)
+        self.am('prepare', (1,'A'))
 
-        #self.l.recv_proposal_rejected((2,'other'), 0)
+        self.l.recv_promise('A', (1,'A'), None, None)
+        self.l.recv_promise('B', (1,'A'), None, None)
         
-        self.l.recv_promise(4, (1,'uid'), None, None)
-        self.ame('accept', ((1,'uid'), PVALUE))
+        self.an()
+        
+        self.l.recv_promise('C', (1,'A'), None, None)
+        
+        self.am('accept', (1,'A'), 'foo')
 
-        self.assertEquals( self.m.tleader, 'gained' )
+        self.assertEquals( self.tleader, 'gained' )
 
 
     def test_lose_leader(self):
         self.test_gain_leader()
 
-        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+        self.assertEquals( self.l.leader_proposal_id, (1,'A') )
         
-        self.l.recv_heartbeat( 'other', (5,'other') )
+        self.l.recv_heartbeat( 'B', (5,'B') )
 
-        self.assertEquals( self.l.leader_proposal_id, (5,'other') )
-        self.assertEquals( self.m.tleader, 'lost' )
+        self.assertEquals( self.l.leader_proposal_id, (5,'B') )
+        self.assertEquals( self.tleader, 'lost' )
 
 
     def test_lose_leader_via_nacks(self):
         self.test_gain_leader()
 
-        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+        self.assertEquals( self.l.leader_proposal_id, (1,'A') )
         
-        self.l.recv_accept_nack( 2, (1,'uid'), (7,'foo') )
+        self.l.recv_accept_nack( 'B', (1,'A'), (2,'B') )
+        self.l.recv_accept_nack( 'C', (1,'A'), (2,'B') )
 
-        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+        self.assertEquals( self.tleader, 'gained' )
+        self.assertEquals( self.l.leader_proposal_id, (1,'A') )
 
-        self.l.recv_accept_nack( 3, (1,'uid'), (7,'foo') )
-
-        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
-
-        self.l.recv_accept_nack( 4, (1,'uid'), (7,'foo') )
+        self.l.recv_accept_nack( 'D', (1,'A'), (2,'B') )
 
         self.assertEquals( self.l.leader_proposal_id, None )
-        self.assertEquals( self.m.tleader, 'lost' )
+        self.assertEquals( self.tleader, 'lost' )
 
 
     def test_regain_leader(self):
         self.test_lose_leader()
-
+        
         for i in range(1, 7):
             self.p()
+            self.an()
 
-        self.assertEquals( self.m.pcount, 1 )
-        self.assertEquals( self.m.cp,     (1,'uid') )
         self.p()
-        self.assertEquals( self.m.pcount, 2 )
-        self.assertEquals( self.m.cp,     (6,'uid') )
 
-        self.m.accept = None
+        # The 6 here comes from using (5,'B') as the heartbeat proposal
+        # id the caused the loss of leadership
+        #
+        self.am('prepare', (6,'A'))
 
-        self.l.recv_promise(2, (6,'uid'), None, None)
-        self.ame('accept', None)
-        self.l.recv_promise(3, (6,'uid'), None, None)
-        self.ame('accept', None)
-        self.l.recv_promise(4, (6,'uid'), None, None)
-        self.ame('accept', ((6,'uid'), PVALUE))
+        self.l.recv_promise('B', (6,'A'), None, None)
+        self.l.recv_promise('C', (6,'A'), None, None)
+        self.an()
+        self.l.recv_promise('D', (6,'A'), None, None)
+        self.am('accept', (6,'A'), 'foo')
 
-        self.assertEquals( self.m.tleader, 'gained' )
+        self.assertEquals( self.tleader, 'gained' )
         
         
 
     def test_ignore_old_leader_heartbeat(self):
         self.test_lose_leader()
 
-        self.l.recv_heartbeat( 'uid', (1,'uid') )
+        self.l.recv_heartbeat( 'A', (1,'A') )
 
-        self.assertEquals( self.l.leader_proposal_id, (5,'other') )
+        self.assertEquals( self.l.leader_proposal_id, (5,'B') )
 
 
     def test_pulse(self):
         self.test_gain_leader()
 
         for i in range(0,8):
-            self.m.tadvance()
+            self.tadvance()
 
-        self.assertEquals( self.m.hbcount, 5 )
-        self.assertEquals( self.l.leader_proposal_id, (1,'uid') )
+        self.assertEquals( self.hbcount, 5 )
+        self.assertEquals( self.l.leader_proposal_id, (1,'A') )
         self.assertTrue( self.l.leader_is_alive() )
 
 
     def test_leader_acquire_timeout_and_retry(self):
-        for i in range(1,10):
-            self.p()
-
-        self.assertEquals( self.m.pcount, 0 )
-        self.assertEquals( self.m.cp,     0 )
-        self.p()
-        self.assertEquals( self.m.pcount, 1 )
-        self.assertEquals( self.m.cp,     (1,'uid') )
-
-        self.l.recv_promise(2, (1,'uid'), None, None)
-        self.ame('accept', None)
-        self.l.recv_promise(3, (1,'uid'), None, None)
-        self.ame('accept', None)
-
-        self.assertEquals( self.m.pcount, 1 )
-        self.assertEquals( self.m.cp,     (1,'uid') )
+        self.pre_acq('foo')
 
         self.p()
 
-        self.assertEquals( self.m.pcount, 2 )
-        self.assertEquals( self.m.cp,     (1,'uid') )
+        self.am('prepare', (1,'A'))
 
-        self.l.recv_promise(4, (1,'uid'), None, None)
-        self.ame('accept', ((1,'uid'), PVALUE))
+        self.l.recv_promise('A', (1,'A'), None, None)
+        self.l.recv_promise('B', (1,'A'), None, None)
+        self.an()
 
-        self.assertEquals( self.m.tleader, 'gained' )
+        self.p()
+
+        self.am('prepare', (1,'A'))
+
+        self.l.recv_promise('C', (1,'A'), None, None)
+        
+        self.am('accept', (1,'A'), 'foo')
+
+        self.assertEquals( self.tleader, 'gained' )
         
