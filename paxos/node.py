@@ -136,7 +136,10 @@ class Proposer (object):
         
         if prev_accepted_id > self.last_accepted_id:
             self.last_accepted_id = prev_accepted_id
-            self.proposed_value   = prev_accepted_value
+            # Only override the current proposal value if the acceptor has
+            # accepted one. "None" is not a valid value
+            if prev_accepted_value is not None:
+                self.proposed_value = prev_accepted_value
 
         if len(self.promises_rcvd) == self.quorum_size:
             self.leader = True
