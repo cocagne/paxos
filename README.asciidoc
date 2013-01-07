@@ -1,9 +1,11 @@
-= Plain Paxos =
+Plain Paxos 
+===========
 Tom Cocagne <tom.cocange@gmail.com>
 v2.0, January 2013
 
 
-== Overview ==
+Overview
+--------
 
 This repository contains a basic implementation of the Paxos algorithm. The
 distinguishing characteristic of this implementation, as compared to other
@@ -20,9 +22,11 @@ provides an excellent basis for Paxos newcomers to learn about and experiment
 with distributed consistency.
 
 
-== Implementation ==
+Implementation
+--------------
 
-=== node.py ===
+node.py
+~~~~~~~
 
 This module contains a Python class for each of the three basic roles in Paxos:
 Proposer, Acceptor, and Learner as well as an aggregation class that combines
@@ -58,7 +62,8 @@ simplicity.
 
 
 
-=== heartbeat.py ===
+heartbeat.py
+~~~~~~~~~~~~
 
 In terms of real-world usage, the core Paxos algorithim leaves a great deal of
 functionality undefined. For example, The Paxos algorithm states that when
@@ -72,7 +77,8 @@ module provides a simple and straight-forward approach based on
 heartbeat messages sent from the current leader.
 
 
-=== durable.py ===
+durable.py
+~~~~~~~~~~
 
 Correct implementations of the Paxos algorithm require saving the algorithm's
 current state to persistent media prior to sending each message over the 
@@ -82,7 +88,8 @@ inopportune time. This module implements a very simple mechanism for efficiently
 saving application state to disk. 
 
 
-== Testing ==
+Testing
+-------
 
 As this library serves to provide correctness guarantees to higher-level consumers,
 this library's testing must be comprehensive and exhaustive. The +test+
