@@ -82,6 +82,7 @@ class HeartbeatNode (node.Node):
             self.leader                = True
             self.proposal_id           = (self.next_proposal_number, self.node_uid)
             self.next_proposal_number += 1
+            self.pulse()
 
             
     def on_recover(self, messenger):
