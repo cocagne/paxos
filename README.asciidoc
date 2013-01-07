@@ -33,25 +33,29 @@ Proposer, Acceptor, and Learner as well as an aggregation class that combines
 all three roles into a single, logcal 'Node' class. 
 
 The module provides a straight-forward implementation of the Paxos algorithm.
-However, there are two implementation-specific items of note. First is that
-each node must be assigned a unique id. Although this is implied by the
-description of the Paxos algorithm, it is not stated explicitly. Second,
-"proposal numbers" in this implementation are better described as proposal
-'IDs'. Rather than an integer number, this implementation uses a tuple of
-+(number,node_uid)+. The purpose of this is to prevent two Proposers from
-independently choosing the same proposal number and attempting to reach
-concensus with it. The addition of the node UID to the numeric proposal number
-ensures that a Proposer can never confuse an acceptance for the 'promise'
-message of another node as a 'promise' message for itself. The ordering
-characteristics for the tuples of +(proposal_number, node_uid)+ are assumed to
-match those of the Python interpreter.
+However, there are three implementation-specific items of note. 
 
-Another common approach to proposal ids, similar to that of the +(proposal_number,
-node_uid)+ tuples, is to use an integer for the proposal id where the bottom few
-bits contain a numeric node_uid and the remaining upper bits contain the proposal
-number. This implementation may shift to that approach at a later date as it is
-more space-efficient but the tuple approach was chosen initially for the sake of
-simplicity.
+1. Each node must be assigned a unique id. Although this is implied by the
+ description of the Paxos algorithm, it is not stated explicitly. 
+2. Second, "proposal numbers" in this implementation are better described as
+ proposal 'IDs'. Rather than an integer number, this implementation uses a tuple
+ of +(number,node_uid)+. The purpose of this is to prevent two Proposers from
+ independently choosing the same proposal number and attempting to reach
+ concensus with it. The addition of the node UID to the numeric proposal number
+ ensures that a Proposer can never confuse an acceptance for the 'promise'
+ message of another node as a 'promise' message for itself. The ordering
+ characteristics for the tuples of +(proposal_number, node_uid)+ are assumed to
+ match those of the Python interpreter.
+ +
+ Another common approach to proposal ids, similar to that of the +(proposal_number,
+ node_uid)+ tuples, is to use an integer for the proposal id where the bottom few
+ bits contain a numeric node_uid and the remaining upper bits contain the proposal
+ number. This implementation may shift to that approach at a later date as it is
+ more space-efficient but the tuple approach was chosen initially for the sake of
+ simplicity.
+3. This implementation supports sending NACK messages to alert Proposers of potentially
+ futile actions. These are not required by the Paxos algorithm but they do not interfere
+ with it and may be used to yield performance benefits.
 
 
 heartbeat.py
