@@ -19,7 +19,7 @@ import collections
 # from the collections module which allows us to write
 # "proposal_id.number" instead of "proposal_id[0]".
 #
-ProposalID = collection.namedtuple('ProposalID', ['number', 'uid'])
+ProposalID = collections.namedtuple('ProposalID', ['number', 'uid'])
 
 
 class Messenger (object):
@@ -72,12 +72,10 @@ class Proposer (object):
             self.proposed_value = value
 
 
-    def prepare(self, increment_proposal_number=True):
+    def prepare(self):
         '''
         Sends a prepare request to all Acceptors as the first step in attempting to
         acquire leadership of the Paxos instance. 
-        
-        The proposal id is a tuple of (proposal_numer, proposer_uid)
         '''
         self.promises_rcvd = set()
         self.proposal_id   = ProposalID(self.next_proposal_number, self.proposer_uid)

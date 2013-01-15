@@ -32,8 +32,26 @@ class Messenger (essential.Messenger):
 
         
 class Proposer (essential.Proposer):
+    '''
+    This class extends the functionality of the essential Proposer
+    implementation by tracking whether the proposer believes itself to
+    be the current leader of the Paxos instance. It also supports a flag
+    to disable active paritcipation in the Paxos instance.
+
+    The 'leader' attribute is a boolean value indicating the Proposer's
+    belief in whether or not it is the current leader. As the documentation
+    for the Messenger.on_leadership_acquired() method describes, multiple
+    nodes may simultaneously believe themselves to be the leader.
+
+    The 'active' attribute is a boolean value indicating whether or not
+    the Proposer should send outgoing messages (defaults to True). Setting
+    this attribute to false places the Proposer in a "passive" mode whereby
+    it will process all incoming message but drops all of the messages it
+    would otherwise have sent. 
+    '''
     
-    leader = False
+    leader = False 
+    active = True  
 
     
     def set_proposal(self, value):
@@ -44,7 +62,7 @@ class Proposer (essential.Proposer):
         if self.proposed_value is None:
             self.proposed_value = value
 
-            if self.leader:
+            if self.leader and self.active:
                 self.messenger.send_accept( self.proposal_id, value )
 
 
@@ -65,7 +83,8 @@ class Proposer (essential.Proposer):
         
             self.next_proposal_number += 1
 
-        self.messenger.send_prepare(self.proposal_id)
+        if self.active:
+            self.messenger.send_prepare(self.proposal_id)
 
     
     def observe_proposal(self, from_uid, proposal_id):
@@ -97,7 +116,7 @@ class Proposer (essential.Proposer):
         Retransmits an Accept! message iff this node is the leader and has
         a proposal value
         '''
-        if self.leader and self.proposed_value:
+        if self.leader and self.proposed_value and self.active:
             self.messenger.send_accept(self.proposal_id, self.proposed_value)
 
 
@@ -124,7 +143,7 @@ class Proposer (essential.Proposer):
 
             self.messenger.on_leadership_acquired()
             
-            if self.proposed_value is not None:
+            if self.proposed_value is not None and self.active:
                 self.messenger.send_accept(self.proposal_id, self.proposed_value)
 
 
@@ -143,11 +162,18 @@ class Acceptor (essential.Acceptor):
     saving the Acceptor's values to stable media. After saving the promised_id
     and accepted_value variables, the "state_saved" method must be called to
     send the pending promise and/or accepted messages.
+
+    The 'active' attribute is a boolean value indicating whether or not
+    the Acceptor should send outgoing messages (defaults to True). Setting
+    this attribute to false places the Acceptor in a "passive" mode whereby
+    it will process all incoming message but drops all of the messages it
+    would otherwise have sent. 
     '''
 
     pending_promise  = None # None or the UID to send a promise message to
     pending_accepted = None # None or the UID to send an accepted message to
-
+    active           = True
+    
     
     @property
     def state_save_required(self):
@@ -161,12 +187,14 @@ class Acceptor (essential.Acceptor):
         if proposal_id == self.promised_id:
             # Duplicate prepare message. No change in state is necessary so the response
             # may be sent immediately
-            self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
+            if self.active:
+                self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
         
         elif proposal_id > self.promised_id:
             self.previous_id = self.promised_id            
             self.promised_id = proposal_id
-            self.pending_promise = from_uid
+            if self.active:
+                self.pending_promise = from_uid
 
         else:
             self.messenger.send_prepare_nack(from_uid, proposal_id, self.promised_id)
@@ -179,28 +207,33 @@ class Acceptor (essential.Acceptor):
         if proposal_id == self.promised_id and value == self.accepted_value:
             # Duplicate accepted proposal. No change in state is necessary so the response
             # may be sent immediately
-            self.messenger.send_accepted(proposal_id, value)
+            if self.active:
+                self.messenger.send_accepted(proposal_id, value)
             
         elif proposal_id >= self.promised_id:
             self.accepted_value   = value
             self.promised_id      = proposal_id
-            self.pending_accepted = from_uid
+            if self.active:
+                self.pending_accepted = from_uid
             
         else:
             self.messenger.send_accept_nack(from_uid, proposal_id, self.promised_id)
 
 
     def state_saved(self):
-        if self.pending_promise:
-            self.messenger.send_promise(self.pending_promise,
-                                        self.promised_id,
-                                        self.previous_id,
-                                        self.accepted_value)
-            
-        if self.pending_accepted:
-            self.messenger.send_accepted(self.promised_id,
-                                         self.accepted_value)
         
+        if self.active:
+            
+            if self.pending_promise:
+                self.messenger.send_promise(self.pending_promise,
+                                            self.promised_id,
+                                            self.previous_id,
+                                            self.accepted_value)
+                
+            if self.pending_accepted:
+                self.messenger.send_accepted(self.promised_id,
+                                             self.accepted_value)
+                
         self.pending_promise  = None
         self.pending_accepted = None
 
