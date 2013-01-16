@@ -9,79 +9,53 @@ Overview
 
 This repository contains a basic implementation of the Paxos algorithm. The
 distinguishing characteristic of this implementation, as compared to other
-freely available open-source implementations, is that this library is
+freely available and open-source implementations, is that this library is
 completely independent of application domains and networking
 infrastructures. Whereas most Paxos implementations are deeply and inextricably
 embedded within application-specific logic, this implementation focuses on
 encapsulating the Paxos logic within opaque and easily re-usable classes.
 
 The goal of this implementation is to provide an algorithmically correct Paxos
-implementation that may be used to provide strong consistency guarantees for
-any networked application. Additionally, the tight focus of this implementation
-provides an excellent basis for Paxos newcomers to learn about and experiment
-with distributed consistency.
+implementation that may be used for educational purposes in addition to direct
+use in networked applications. This implementation is specifically designed
+to facilitate understanding of both the essential Paxos algorithm as well as
+the practical considerations that must be taken into account by real-world
+implementations. The intent is to provide an excellent basis for Paxos 
+newcomers to learn about and experiment with distributed consistency. 
 
 
 Implementation
 --------------
 
-node.py
-~~~~~~~
-
-This module contains a Python class for each of the three basic roles in Paxos:
-Proposer, Acceptor, and Learner as well as an aggregation class that combines
-all three roles into a single, logcal 'Node' class.
-
-The module provides a straight-forward implementation of the Paxos algorithm.
-However, there are three implementation-specific items of note.
-
-First, each node must be assigned a unique id. Although this is implied by the
-description of the Paxos algorithm, it is not stated explicitly.
-
-Second, this implementation supports sending NACK messages to alert Proposers
-of potentially futile actions. These are not required by the Paxos algorithm
-but they do not interfere with it and may be used to yield performance
-benefits.
-
-Third, "proposal numbers" in this implementation are better described as
-proposal 'IDs'. Rather than an integer number, this implementation uses a tuple
-of +(number,node_uid)+. The purpose of this is to prevent two Proposers from
-independently choosing the same proposal number and attempting to reach
-concensus with it. The addition of the node UID to the numeric proposal number
-ensures that a Proposer can never confuse an acceptance for the 'promise'
-message of another node as a 'promise' message for itself. The ordering
-characteristics for the tuples of +(proposal_number, node_uid)+ are assumed to
-match those of the Python interpreter.
-
-Another common approach to proposal ids, similar to that of the +(proposal_number,
-node_uid)+ tuples, is to use an integer for the proposal id where the bottom few
-bits contain a numeric node_uid and the remaining upper bits contain the proposal
-number. This implementation may shift to that approach at a later date as it is
-more space-efficient but the tuple approach was chosen initially for the sake of
-simplicity.
-
-
-
-heartbeat.py
+essential.py
 ~~~~~~~~~~~~
 
-In terms of real-world usage, the core Paxos algorithim leaves a great deal of
-functionality undefined. For example, The Paxos algorithm states that when
-certain failures occur, retransmissions are required to ensure
-progress. However, it fails to describe the details of how these
-retransmissions or other progression-ensuring actions should occur. The
-omissions were made with good reason though as there are likely an infinite
-number of correct and useful implementations that both fulfill the basic Paxos
-requirements while simultaneously ensuring efficient forward progress. This
-module provides a simple and straight-forward approach based on
-heartbeat messages sent from the current leader.
+This module provides a direct and minimal implementation of the essential Paxos
+algorithm. The primary purpose of this module is educational as it allows for
+easy contrast between the implementation of the pure algorithm and that of the
+one enhanced for practicality.
+
+
+practical.py
+~~~~~~~~~~~~
+
+This module enhances the essential Paxos algorithm and adds support for such
+things as leadership tracking, NACKs, and state persistence.
+
+
+functional.py
+~~~~~~~~~~~~~
+
+This module provides a fully-functional Paxos implementation that employs
+a simple heartbeating mechanism to detect leadership failure and initiate
+recovery.
 
 
 durable.py
 ~~~~~~~~~~
 
-Correct implementations of the Paxos algorithm require saving the algorithm's
-current state to persistent media prior to sending each message over the 
+Correct implementations of the Paxos algorithm require saving Acceptor
+state to persistent media prior to sending Prepare and Accept messages over the 
 network. This is necessary to ensure that promises made to external entities
 will never be reneged upon should the application crash and recover at an
 inopportune time. This module implements a very simple mechanism for efficiently
