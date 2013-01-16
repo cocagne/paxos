@@ -49,7 +49,7 @@ class Messenger (object):
         '''
 
 
-
+    
 class Proposer (object):
 
     messenger            = None
@@ -108,19 +108,15 @@ class Proposer (object):
             
             if self.proposed_value is not None:
                 self.messenger.send_accept(self.proposal_id, self.proposed_value)
-            
-
 
 
         
 class Acceptor (object):
 
-    messenger      = None
-    
+    messenger      = None    
     promised_id    = None
-    accepted_value = None
     accepted_id    = None
-    previous_id    = None
+    accepted_value = None
 
 
     def recv_prepare(self, from_uid, proposal_id):
@@ -129,13 +125,11 @@ class Acceptor (object):
         '''
         if proposal_id == self.promised_id:
             # Duplicate prepare message
-            self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
+            self.messenger.send_promise(from_uid, proposal_id, self.accepted_id, self.accepted_value)
         
         elif proposal_id > self.promised_id:
-            self.previous_id = self.promised_id            
             self.promised_id = proposal_id
-            self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
-
+            self.messenger.send_promise(from_uid, proposal_id, self.accepted_id, self.accepted_value)
 
                     
     def recv_accept_request(self, from_uid, proposal_id, value):
@@ -143,13 +137,13 @@ class Acceptor (object):
         Called when an Accept! message is received from a Proposer
         '''
         if proposal_id >= self.promised_id:
-            self.accepted_value  = value
             self.promised_id     = proposal_id
+            self.accepted_id     = proposal_id
+            self.accepted_value  = value
             self.messenger.send_accepted(proposal_id, self.accepted_value)
-        
 
 
-        
+    
 class Learner (object):
 
     quorum_size       = None

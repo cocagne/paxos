@@ -3,7 +3,6 @@ import itertools
 import os.path
 import pickle
 
-#from twisted.trial import unittest
 import unittest
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -46,10 +45,44 @@ class PracticalProposerTests (test_essential.EssentialProposerTests):
         self.am('accept', PID(1,'A'), 'foo')
 
 
+    def test_resend_accept(self):
+        self.set_leader()
+        self.p.set_proposal( 'foo' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.am('accept', PID(1,'A'), 'foo')
+        self.p.resend_accept()
+        self.am('accept', PID(1,'A'), 'foo')
+
+
+    def test_resend_accept_not_active(self):
+        self.set_leader()
+        self.p.set_proposal( 'foo' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.am('accept', PID(1,'A'), 'foo')
+        self.p.active = False
+        self.p.resend_accept()
+        self.an()
+
+        
+    def test_set_proposal_no_previous_value_as_leader_not_active(self):
+        self.set_leader()
+        self.p.active = False
+        self.p.set_proposal( 'foo' )
+        self.ae( self.p.proposed_value, 'foo' )
+        self.an()
+
+
     def test_prepare_increment_on_foriegn_promise(self):
         self.p.recv_promise('B', PID(5,'C'), None, None)
         self.p.prepare()
         self.am('prepare', PID(6,'A'))
+
+        
+    def test_prepare_increment_on_foriegn_promise_not_active(self):
+        self.p.active = False
+        self.p.recv_promise('B', PID(5,'C'), None, None)
+        self.p.prepare()
+        self.an()
 
 
     def test_preare_no_increment(self):
@@ -86,6 +119,23 @@ class PracticalProposerTests (test_essential.EssentialProposerTests):
         self.at(self.p.leader)
         self.at(self.leader_acquired)
         self.am('accept', PID(1,'A'), 'foo')
+
+
+    def test_recv_promise_acquire_leadership_with_proposal_not_active(self):
+        self.p.set_proposal('foo')
+        self.p.prepare()
+        self.am('prepare', PID(1,'A'))
+        self.ae( len(self.p.promises_rcvd), 0 )
+        self.p.recv_promise( 'B', PID(1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 1 )
+        self.at(not self.p.leader)
+        self.at(not self.leader_acquired)
+        self.p.active = False
+        self.p.recv_promise( 'C', PID(1,'A'), None, None )
+        self.ae( len(self.p.promises_rcvd), 2 )
+        self.at(self.p.leader)
+        self.at(self.leader_acquired)
+        self.an()
 
 
     def test_recv_promise_acquire_leadership_without_proposal(self):
@@ -134,7 +184,11 @@ class PracticalProposerTests (test_essential.EssentialProposerTests):
 
 
 class PracticalAcceptorTests (test_essential.EssentialAcceptorTests):
-    
+
+    def recover(self):
+        prev = self.a
+        self.a = self.acceptor_factory(self, 'A', 2)
+        self.a.recover(prev.promised_id, prev.accepted_id, prev.accepted_value)
 
     def test_recv_prepare_nack(self):
         self.a.recv_prepare( 'A', PID(2,'A') )
@@ -143,8 +197,115 @@ class PracticalAcceptorTests (test_essential.EssentialAcceptorTests):
         self.am('prepare_nack', 'A', PID(1,'A'), PID(2,'A'))
 
 
+    def test_recv_prepare_nack_not_active(self):
+        self.a.recv_prepare( 'A', PID(2,'A') )
+        self.am('promise', 'A', PID(2,'A'), None, None)
+        self.a.active = False
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.an()
+
+
     def test_recv_accept_request_less_than_promised(self):
         super(PracticalAcceptorTests, self).test_recv_accept_request_less_than_promised()
+        self.am('accept_nack', 'A', PID(1,'A'), PID(5,'A'))
+
+
+    def test_recv_accept_request_less_than_promised(self):
+        self.a.recv_prepare( 'A', PID(5,'A') )
+        self.am('promise', 'A', PID(5,'A'), None, None)
+        self.a.active = False
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.ae( self.a.accepted_value, None )
+        self.ae( self.a.accepted_id,    None )
+        self.ae( self.a.promised_id,    PID(5,'A'))
+        self.an()
+
+
+    def test_recv_prepare_initial_not_active(self):
+        self.ae( self.a.promised_id    , None)
+        self.ae( self.a.accepted_value , None)
+        self.ae( self.a.accepted_id    , None)
+        self.a.active = False
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.an()
+
+        
+    def test_recv_prepare_duplicate_not_active(self):
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.am('promise', 'A', PID(1,'A'), None, None)
+        self.a.active = False
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.an()
+
+
+    def test_recv_accept_request_duplicate(self):
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.am('accepted', PID(1,'A'), 'foo')
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.am('accepted', PID(1,'A'), 'foo')
+
+        
+    def test_recv_accept_request_duplicate_not_active(self):
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.am('accepted', PID(1,'A'), 'foo')
+        self.a.active = False
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.an()
+
+
+    def test_recv_accept_request_initial_not_active(self):
+        self.a.active = False
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.an()
+
+        
+    def test_recv_accept_request_promised_not_active(self):
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.am('promise', 'A', PID(1,'A'), None, None)
+        self.a.active = False
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.an()
+
+
+    # --- Durability Tests ---
+
+    def test_durable_recv_prepare_duplicate(self):
+        self.a.recv_prepare( 'A', PID(2,'A') )
+        self.am('promise', 'A', PID(2,'A'), None, None)
+        self.recover()
+        self.a.recv_prepare( 'A', PID(2,'A') )
+        self.am('promise', 'A', PID(2,'A'), None, None)
+
+        
+    def test_durable_recv_prepare_override(self):
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.am('promise', 'A', PID(1,'A'), None, None)
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.clear_msgs()
+        self.a.recv_prepare( 'B', PID(2,'B') )
+        self.am('promise', 'B', PID(2,'B'), PID(1,'A'), 'foo')
+
+
+    def test_durable_recv_accept_request_promised(self):
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.am('promise', 'A', PID(1,'A'), None, None)
+        self.recover()
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.am('accepted', PID(1,'A'), 'foo')
+
+        
+    def test_durable_recv_accept_request_greater_than_promised(self):
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.am('promise', 'A', PID(1,'A'), None, None)
+        self.recover()
+        self.a.recv_accept_request('A', PID(5,'A'), 'foo')
+        self.am('accepted', PID(5,'A'), 'foo')
+
+
+    def test_durable_recv_accept_request_less_than_promised(self):
+        self.a.recv_prepare( 'A', PID(5,'A') )
+        self.am('promise', 'A', PID(5,'A'), None, None)
+        self.a.recv_accept_request('A', PID(1,'A'), 'foo')
         self.am('accept_nack', 'A', PID(1,'A'), PID(5,'A'))
         
 
@@ -155,31 +316,6 @@ class PracticalLearnerTests (test_essential.EssentialLearnerTests):
 
     
 class NodeTester(PracticalMessenger, unittest.TestCase):
-
-    def XXXtest_durability(self):
-        n = node.Node(self, 'A', 2)
-
-        n.prepare()
-        n.recv_prepare( 'A', (2,'A') )
-        n.recv_accept_request( 'A', (2,'A'), 'foo' )
-        n.recv_accepted( 'A', (2,'A'), 'foo' )
-
-        self.clear_msgs()
-        
-        n2 = pickle.loads( pickle.dumps(n) )
-        n2.recover(self)
-
-        n2.prepare()
-        self.am('prepare', (2,'A'))
-
-        n2.recv_accept_request( 'A', (1,'A'), 'blah' )
-        self.am('accept_nack', 'A', (1,'A'), (2,'A'))
-
-        self.at( not n2.complete )
-        n2.recv_accepted( 'B', (2,'A'), 'foo' )
-
-        self.at( n2.complete )
-
 
     def test_change_quorum_size(self):
         n = practical.Node(self, 'A', 2)
@@ -201,9 +337,13 @@ class AutoSaveMixin(object):
         if self.persistance_required:
             self.persisted()
 
+
+    
 class TNode(AutoSaveMixin, practical.Node):
     pass
-    
+
+
+
 class PracticalProposerTester(PracticalProposerTests, PracticalMessenger, unittest.TestCase):
     proposer_factory = TNode
 

@@ -88,15 +88,6 @@ class HeartbeatNode (practical.Node):
             self.proposal_id           = ProposalID(self.next_proposal_number, self.node_uid)
             self.next_proposal_number += 1
 
-            
-    def on_recover(self, messenger):
-        '''
-        Must be called after the instance has been recovered from durable state
-        '''
-        super(HeartbeatNode, self).on_recover(messenger)
-        self.leader_uid         = None
-        self.leader_proposal_id = ProposalID(1,None)
-
 
     def prepare(self, *args, **kwargs):
         self._nacks.clear()

@@ -2,7 +2,6 @@ import sys
 import os.path
 import heapq
 
-#from twisted.trial import unittest
 import unittest
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,15 +16,10 @@ from test_practical import PID
 class HeartbeatMessenger (test_practical.PracticalMessenger):
         
     def msetup(self):
-        self.t = 1
-        self.q = []
-        self.cp     = 0
-        self.hb     = 0
-        self.pcount = 0
+        self.t       = 1
+        self.q       = []
+        self.hb      = 0
         self.hbcount = 0
-        self.ap = 0
-        self.acount = 0
-        self.avalue = None
         self.tleader = None
 
 
@@ -35,24 +29,30 @@ class HeartbeatMessenger (test_practical.PracticalMessenger):
         while self.q and self.q[0][0] <= self.t:
             heapq.heappop(self.q)[1]()
 
+            
     def timestamp(self):
         return self.t
 
+    
     def schedule(self, when, func_obj):
         whence = when + self.timestamp()
         heapq.heappush(self.q, (when + self.timestamp(), func_obj))
 
+        
     def send_heartbeat(self, pnum):
-        self.hb = pnum
+        self.hb       = pnum
         self.hbcount += 1
 
+        
     def on_leadership_acquired(self):
         super(HeartbeatMessenger,self).on_leadership_acquired()
         self.tleader = 'gained'
 
+        
     def on_leadership_lost(self):
         self.tleader = 'lost'
 
+        
     def on_leadership_change(self, old_uid, new_uid):
         pass
         
@@ -101,6 +101,16 @@ class HeartbeatTester (HeartbeatMessenger, unittest.TestCase):
         self.assertEquals( self.l.proposal_id, PID(1,'A') )
 
 
+    def test_leader_constructor(self):
+        self.ae(self.l.leader_uid,           None)
+        self.ae(self.l.leader_proposal_id,   PID(1,None))
+        self.ae(self.l.next_proposal_number, 1)
+        n = HNode(self, 'A', 3, 'A')
+        self.ae(n.leader_uid,           'A')
+        self.ae(n.leader_proposal_id,   PID(1,'A'))
+        self.ae(n.next_proposal_number, 2)
+
+
     def test_initial_leader(self):
         self.l.leader_proposal_id = PID(1, 'B')
 
@@ -133,6 +143,38 @@ class HeartbeatTester (HeartbeatMessenger, unittest.TestCase):
         self.am('accept', PID(1,'A'), 'foo')
 
         self.assertEquals( self.tleader, 'gained' )
+
+
+    def test_gain_leader_abort(self):
+        self.pre_acq('foo')
+        
+        self.p()
+
+        self.am('prepare', PID(1,'A'))
+
+        self.l.recv_promise('A', PID(1,'A'), None, None)
+        self.l.recv_promise('B', PID(1,'A'), None, None)
+
+        self.at( self.l._acquiring )
+        self.l.recv_heartbeat( 'B', PID(5,'B') )
+        self.at( not self.l._acquiring )
+        self.l.acquire_leadership()
+        self.an()
+
+
+    def test_gain_leader_nack(self):
+        self.pre_acq('foo')
+        
+        self.p()
+
+        self.am('prepare', PID(1,'A'))
+
+        self.l.recv_promise('A', PID(1,'A'), None, None)
+
+        self.l.recv_prepare_nack('B', PID(1,'A'), PID(2,'C'))
+
+        self.am('prepare', PID(3,'A'))
+        
 
 
     def test_lose_leader(self):

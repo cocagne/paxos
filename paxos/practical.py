@@ -156,19 +156,19 @@ class Acceptor (essential.Acceptor):
     '''
     Acceptors act as the fault-tolerant memory for Paxos. To ensure correctness
     in the presense of failure, Acceptors must be able to remember the promises
-    they've made even in the event of power outages. Consequently, any changes to
-    the promised_id and/or accepted_value must be persisted to stable media prior
-    to sending promise and accepted messages. After calling the recv_prepare() and
-    recv_accept_request(), the property 'persistence_required' should be checked
-    to see if persistence is required. 
+    they've made even in the event of power outages. Consequently, any changes
+    to the promised_id, accepted_id, and/or accepted_value must be persisted to
+    stable media prior to sending promise and accepted messages. After calling
+    the recv_prepare() and recv_accept_request(), the property
+    'persistence_required' should be checked to see if persistence is required.
 
     Note that because Paxos permits any combination of dropped packets, not
     every promise/accepted message needs to be sent. This implementation only
     responds to the last prepare/accept_request message received prior to
     saving the Acceptor's values to stable media (which is typically a slow
-    process). After saving the promised_id and accepted_value variables, the
-    "persisted" method must be called to send the pending promise and/or
-    accepted messages.
+    process). After saving the promised_id, accepted_id, and accepted_value
+    variables, the "persisted" method must be called to send the pending
+    promise and/or accepted messages.
 
     The 'active' attribute is a boolean value indicating whether or not
     the Acceptor should send outgoing messages (defaults to True). Setting
@@ -185,6 +185,12 @@ class Acceptor (essential.Acceptor):
     @property
     def persistance_required(self):
         return self.pending_promise is not None or self.pending_accepted is not None
+
+
+    def recover(self, promised_id, accepted_id, accepted_value):
+        self.promised_id    = promised_id
+        self.accepted_id    = accepted_id
+        self.accepted_value = accepted_value
     
 
     def recv_prepare(self, from_uid, proposal_id):
@@ -195,54 +201,57 @@ class Acceptor (essential.Acceptor):
             # Duplicate prepare message. No change in state is necessary so the response
             # may be sent immediately
             if self.active:
-                self.messenger.send_promise(from_uid, proposal_id, self.previous_id, self.accepted_value)
+                self.messenger.send_promise(from_uid, proposal_id, self.accepted_id, self.accepted_value)
         
         elif proposal_id > self.promised_id:
-            self.previous_id = self.promised_id            
             self.promised_id = proposal_id
             if self.active:
                 self.pending_promise = from_uid
 
         else:
-            self.messenger.send_prepare_nack(from_uid, proposal_id, self.promised_id)
+            if self.active:
+                self.messenger.send_prepare_nack(from_uid, proposal_id, self.promised_id)
 
                     
     def recv_accept_request(self, from_uid, proposal_id, value):
         '''
         Called when an Accept! message is received from the network
         '''
-        if proposal_id == self.promised_id and value == self.accepted_value:
+        if proposal_id == self.accepted_id and value == self.accepted_value:
             # Duplicate accepted proposal. No change in state is necessary so the response
             # may be sent immediately
             if self.active:
                 self.messenger.send_accepted(proposal_id, value)
             
         elif proposal_id >= self.promised_id:
-            self.accepted_value   = value
             self.promised_id      = proposal_id
+            self.accepted_value   = value
+            self.accepted_id      = proposal_id
             if self.active:
                 self.pending_accepted = from_uid
             
         else:
-            self.messenger.send_accept_nack(from_uid, proposal_id, self.promised_id)
+            if self.active:
+                self.messenger.send_accept_nack(from_uid, proposal_id, self.promised_id)
 
 
     def persisted(self):
         '''
         This method sends any pending Promise and/or Accepted messages. Prior to
         calling this method, the application must ensure that the promised_id
-        and accepted_value variables have been persisted to stable media.
+        accepted_id, and accepted_value variables have been persisted to stable
+        media.
         '''
         if self.active:
             
             if self.pending_promise:
                 self.messenger.send_promise(self.pending_promise,
                                             self.promised_id,
-                                            self.previous_id,
+                                            self.accepted_id,
                                             self.accepted_value)
                 
             if self.pending_accepted:
-                self.messenger.send_accepted(self.promised_id,
+                self.messenger.send_accepted(self.accepted_id,
                                              self.accepted_value)
                 
         self.pending_promise  = None
@@ -274,20 +283,6 @@ class Node (Proposer, Acceptor, Learner):
         return self.node_uid
             
 
-    def __getstate__(self):
-        pstate = dict( self.__dict__ )
-        del pstate['messenger']
-        return pstate
-
-    
-    def recover(self, messenger):
-        '''
-        Required after unpickling a Node object to re-establish the
-        messenger attribute
-        '''
-        self.messenger = messenger
-
-        
     def change_quorum_size(self, quorum_size):
         self.quorum_size = quorum_size
 

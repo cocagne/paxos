@@ -165,15 +165,27 @@ class EssentialProposerTests (object):
         self.am('prepare', PID(4,'A'))
         self.p.last_accepted_id = PID(1,'B')
         self.p.proposed_value   = 'foo'
-        self.p.recv_promise( 'B', PID(4,'A'), PID(3,'B'), 'foo' )
+        self.p.recv_promise( 'B', PID(4,'A'), PID(3,'B'), 'bar' )
         self.ae( self.p.last_accepted_id, PID(3,'B') )
-        self.ae( self.p.proposed_value, 'foo' )
+        self.ae( self.p.proposed_value, 'bar' )
+
+        
+    def test_recv_promise_ignore_previous_proposal_value(self):
+        self.p.next_proposal_number = 4
+        self.p.prepare()
+        self.am('prepare', PID(4,'A'))
+        self.p.last_accepted_id = PID(1,'B')
+        self.p.proposed_value   = 'foo'
+        self.p.recv_promise( 'B', PID(4,'A'), PID(3,'B'), 'bar' )
+        self.ae( self.p.last_accepted_id, PID(3,'B') )
+        self.ae( self.p.proposed_value, 'bar' )
+        self.p.recv_promise( 'C', PID(4,'A'), PID(2,'B'), 'baz' )
+        self.ae( self.p.last_accepted_id, PID(3,'B') )
+        self.ae( self.p.proposed_value, 'bar' )
 
 
-    
 
-
-
+        
 class EssentialAcceptorTests (object):
 
     acceptor_factory = None 
@@ -188,7 +200,6 @@ class EssentialAcceptorTests (object):
         self.ae( self.a.promised_id    , None)
         self.ae( self.a.accepted_value , None)
         self.ae( self.a.accepted_id    , None)
-        self.ae( self.a.previous_id    , None)
         self.a.recv_prepare( 'A', PID(1,'A') )
         self.am('promise', 'A', PID(1,'A'), None, None)
 
@@ -232,6 +243,9 @@ class EssentialAcceptorTests (object):
         self.a.recv_prepare( 'A', PID(5,'A') )
         self.am('promise', 'A', PID(5,'A'), None, None)
         self.a.recv_accept_request('A', PID(1,'A'), 'foo')
+        self.ae( self.a.accepted_value, None )
+        self.ae( self.a.accepted_id,    None )
+        self.ae( self.a.promised_id,    PID(5,'A'))
 
 
 
