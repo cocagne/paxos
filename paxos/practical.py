@@ -1,3 +1,7 @@
+'''
+This module builds upon the essential Paxos implementation and adds
+functionality required for most practical uses of the algorithm. 
+'''
 from paxos import essential
 
 from paxos.essential import ProposalID
@@ -45,9 +49,9 @@ class Proposer (essential.Proposer):
 
     The 'active' attribute is a boolean value indicating whether or not
     the Proposer should send outgoing messages (defaults to True). Setting
-    this attribute to false places the Proposer in a "passive" mode whereby
-    it will process all incoming message but drops all of the messages it
-    would otherwise have sent. 
+    this attribute to false places the Proposer in a "passive" mode where
+    it processes all incoming messages but drops all messages it would
+    otherwise send. 
     '''
     
     leader = False 
@@ -68,13 +72,12 @@ class Proposer (essential.Proposer):
 
     def prepare(self, increment_proposal_number=True):
         '''
-        Sends a prepare request to all Acceptors as the first step in attempting to
-        acquire leadership of the Paxos instance. If the default argument is True,
-        the proposal id will be set higher than that of any previous observed
+        Sends a prepare request to all Acceptors as the first step in
+        attempting to acquire leadership of the Paxos instance. If the
+        'increment_proposal_number' argument is True (the default), the
+        proposal id will be set higher than that of any previous observed
         proposal id. Otherwise the previously used proposal id will simply be
         retransmitted.
-        
-        The proposal id is a tuple of (proposal_numer, proposer_uid)
         '''
         if increment_proposal_number:
             self.leader        = False
@@ -89,9 +92,10 @@ class Proposer (essential.Proposer):
     
     def observe_proposal(self, from_uid, proposal_id):
         '''
-        Optional method used to update the proposal counter as proposals are seen on the network.
-        When co-located with Acceptors and/or Learners, this method may be used to avoid a message
-        delay when attempting to assume leadership (guaranteed NACK if the proposal number is too low).
+        Optional method used to update the proposal counter as proposals are
+        seen on the network.  When co-located with Acceptors and/or Learners,
+        this method may be used to avoid a message delay when attempting to
+        assume leadership (guaranteed NACK if the proposal number is too low).
         '''
         if from_uid != self.proposer_uid:
             if proposal_id >= (self.next_proposal_number, self.proposer_uid):
@@ -154,20 +158,23 @@ class Acceptor (essential.Acceptor):
     in the presense of failure, Acceptors must be able to remember the promises
     they've made even in the event of power outages. Consequently, any changes to
     the promised_id and/or accepted_value must be persisted to stable media prior
-    to sending promise and accepted messages.
+    to sending promise and accepted messages. After calling the recv_prepare() and
+    recv_accept_request(), the property 'persistence_required' should be checked
+    to see if persistence is required. 
 
-    Note that because Paxos permits any combination of dropped packages, not
+    Note that because Paxos permits any combination of dropped packets, not
     every promise/accepted message needs to be sent. This implementation only
     responds to the last prepare/accept_request message received prior to
-    saving the Acceptor's values to stable media. After saving the promised_id
-    and accepted_value variables, the "state_saved" method must be called to
-    send the pending promise and/or accepted messages.
+    saving the Acceptor's values to stable media (which is typically a slow
+    process). After saving the promised_id and accepted_value variables, the
+    "persisted" method must be called to send the pending promise and/or
+    accepted messages.
 
     The 'active' attribute is a boolean value indicating whether or not
     the Acceptor should send outgoing messages (defaults to True). Setting
-    this attribute to false places the Acceptor in a "passive" mode whereby
-    it will process all incoming message but drops all of the messages it
-    would otherwise have sent. 
+    this attribute to false places the Acceptor in a "passive" mode where
+    it processes all incoming messages but drops all messages it would
+    otherwise send. 
     '''
 
     pending_promise  = None # None or the UID to send a promise message to
@@ -176,7 +183,7 @@ class Acceptor (essential.Acceptor):
     
     
     @property
-    def state_save_required(self):
+    def persistance_required(self):
         return self.pending_promise is not None or self.pending_accepted is not None
     
 
@@ -220,8 +227,12 @@ class Acceptor (essential.Acceptor):
             self.messenger.send_accept_nack(from_uid, proposal_id, self.promised_id)
 
 
-    def state_saved(self):
-        
+    def persisted(self):
+        '''
+        This method sends any pending Promise and/or Accepted messages. Prior to
+        calling this method, the application must ensure that the promised_id
+        and accepted_value variables have been persisted to stable media.
+        '''
         if self.active:
             
             if self.pending_promise:

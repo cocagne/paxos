@@ -193,13 +193,13 @@ class AutoSaveMixin(object):
     
     def recv_prepare(self, from_uid, proposal_id):
         super(AutoSaveMixin, self).recv_prepare(from_uid, proposal_id)
-        if self.state_save_required:
-            self.state_saved()
+        if self.persistance_required:
+            self.persisted()
 
     def recv_accept_request(self, from_uid, proposal_id, value):
         super(AutoSaveMixin, self).recv_accept_request(from_uid, proposal_id, value)
-        if self.state_save_required:
-            self.state_saved()
+        if self.persistance_required:
+            self.persisted()
 
 class TNode(AutoSaveMixin, practical.Node):
     pass

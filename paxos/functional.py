@@ -1,9 +1,13 @@
-
+'''
+This module provides a fully functional Paxos implementation based on a
+simple heartbeating mechanism.
+'''
 import time
 
 from paxos import practical
 
 from paxos.practical import ProposalID
+
 
 class HeartbeatMessenger (practical.Messenger):
 
@@ -35,18 +39,18 @@ class HeartbeatMessenger (practical.Messenger):
     
 class HeartbeatNode (practical.Node):
     '''
-    This class augments the basic Paxos node to provide a reasonable
-    assurance of progress through a heartbeat mechanism used to detect leader
-    failure and initiate leadership acquisition.
+    This class implements a Paxos node that provides a reasonable assurance of
+    progress through a simple heartbeating mechanism that is used to detect
+    leader failure and initiate leadership acquisition.
 
     If one or more heartbeat messages are not received within the
     'liveness_window', leadership acquisition will be attempted by sending out
     phase 1a, Prepare messages. If a quorum of replies acknowledging leadership
     is received, the node has successfully gained leadership and will begin
-    sending out heartbeat messages. If a quorum is not received, the
-    node will continually send a prepare every 'liveness_window' until either
-    a quorum is established or a heartbeat with a proposal number greater than
-    its own is seen. The units for hb_period and liveness_window is seconds. Floating
+    sending out heartbeat messages. If a quorum is not received, the node will
+    continually send a prepare every 'liveness_window' until either a quorum is
+    established or a heartbeat with a proposal number greater than its own is
+    received. The units for hb_period and liveness_window is seconds and floating
     point values may be used for sub-second precision.
 
     Leadership loss is detected by way of receiving a heartbeat message from a proposer
@@ -109,7 +113,9 @@ class HeartbeatNode (practical.Node):
     
     def poll_liveness(self):
         '''
-        Should be called every liveness_window
+        Should be called every liveness_window. This method checks to see if the
+        current leader is active and, if not, will begin the leadership acquisition
+        process.
         '''
         if not self.leader_is_alive() and not self.observed_recent_prepare():
             if self._acquiring:
@@ -151,6 +157,10 @@ class HeartbeatNode (practical.Node):
 
             
     def acquire_leadership(self):
+        '''
+        Initiates the leadership acquisition process if the current leader
+        appears to have failed.
+        '''
         if self.leader_is_alive():
             self._acquiring = False
 

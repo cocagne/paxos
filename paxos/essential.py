@@ -3,7 +3,7 @@ This module provides a minimal implementation of the Paxos algorithm
 that is independent of the underlying messaging mechanism. These
 classes implement only the essential Paxos components and omit
 the practical considerations (such as durability, message
-retransmissions, and NACKs). 
+retransmissions, NACKs, etc). 
 '''
 
 import collections
