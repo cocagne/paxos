@@ -1,6 +1,6 @@
 Plain Paxos 
 ===========
-Tom Cocagne <tom.cocagne@gmail.com>  
+Tom Cocagne &lt;tom.cocagne@gmail.com&gt;  
 v2.0, January 2013
 
 
