@@ -68,8 +68,6 @@ class HashMismatch (FileCorrupted):
 class FileTruncated (FileCorrupted):
     pass
 
-class PickleCorrupted (FileCorrupted):
-    pass
 
 
 def read( fd ):
@@ -103,10 +101,8 @@ def read( fd ):
     if not m.digest() == md5hash:
         raise HashMismatch()
     
-    try:
-        return serial_number, pickle.loads(data3)
-    except:
-        raise PickleCorrupted()
+    return serial_number, pickle.loads(data3)
+    
 
     
 def write( fd, serial_number, pyobject ):

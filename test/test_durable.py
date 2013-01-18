@@ -100,6 +100,11 @@ class DurableObjectHandlerTester (unittest.TestCase):
         self.dohs.append(doh)
         return doh
 
+
+    def test_bad_directory(self):
+        self.assertRaises(Exception, durable.DurableObjectHandler, '/@#$!$^FOOBARBAZ', 'blah')
+        
+
     def test_no_save(self):
         self.doh.close()
         d = self.newdoh('id1')
