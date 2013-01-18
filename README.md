@@ -13,15 +13,14 @@ freely available and open-source implementations, is that this library is
 completely independent of application domains and networking
 infrastructures. Whereas most Paxos implementations are deeply and inextricably
 embedded within application-specific logic, this implementation focuses on
-encapsulating the Paxos logic within opaque and easily re-usable classes.
+encapsulating the Paxos algorithm within opaque and easily re-usable classes.
 
-The goal of this implementation is to provide an algorithmically correct Paxos
+The goal of this library is to provide an algorithmically correct Paxos
 implementation that may be used for educational purposes in addition to direct
-use in networked applications. This implementation is specifically designed
-to facilitate understanding of both the essential Paxos algorithm as well as
-the practical considerations that must be taken into account by real-world
-implementations. The intent is to provide an excellent basis for Paxos 
-newcomers to learn about and experiment with distributed consistency. 
+use in networked applications. This implementation is specifically designed to
+facilitate understanding of both the essential Paxos algorithm as well as the
+practical considerations that must be taken into account for real-world
+use. 
 
 
 Implementation
