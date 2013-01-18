@@ -1,6 +1,6 @@
 Plain Paxos 
 ===========
-Tom Cocagne <tom.cocange@gmail.com>
+Tom Cocagne <tom.cocagne@gmail.com>
 v2.0, January 2013
 
 
@@ -27,8 +27,8 @@ newcomers to learn about and experiment with distributed consistency.
 Implementation
 --------------
 
-essential.py
-~~~~~~~~~~~~
+### essential.py
+
 
 This module provides a direct and minimal implementation of the essential Paxos
 algorithm. The primary purpose of this module is educational as it allows for
@@ -36,23 +36,23 @@ easy contrast between the implementation of the pure algorithm and that of the
 one enhanced for practicality.
 
 
-practical.py
-~~~~~~~~~~~~
+### practical.py
+
 
 This module enhances the essential Paxos algorithm and adds support for such
 things as leadership tracking, NACKs, and state persistence.
 
 
-functional.py
-~~~~~~~~~~~~~
+### functional.py
+
 
 This module provides a fully-functional Paxos implementation that employs
 a simple heartbeating mechanism to detect leadership failure and initiate
 recovery.
 
 
-durable.py
-~~~~~~~~~~
+### durable.py
+
 
 Correct implementations of the Paxos algorithm require saving Acceptor
 state to persistent media prior to sending Prepare and Accept messages over the 
