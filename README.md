@@ -65,6 +65,6 @@ Testing
 -------
 
 As this library serves to provide correctness guarantees to higher-level consumers,
-this library's testing must be comprehensive and exhaustive. The +test+
+this library's testing must be comprehensive and exhaustive. The `test`
 directory of the root source code repository contains the unittest files used to
 excersise the implementation. 
