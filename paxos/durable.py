@@ -46,9 +46,27 @@ try:
 except ImportError:
     import pickle
 
-# On platforms without os.fdatasync (eg. OS-X), use fcntl.F_FULLFSYNC instead
-if not hasattr(os,'fdatasync'):
-    import fcntl
+# This module is primarily concerned with flushing data to the disk. The 
+# default os.fsync goes a bit beyond that so os.fdatasync is used instead
+# if it's available. Failing that, fcntl.fcntl(fd, fcntl.F_FULLSYNC) is
+# attempted (OSX equivalent). Failing that, os.fsync is used (Windows).
+#
+_fsync = None
+
+if hasattr(os, 'fdatasync'):
+    _fsync = os.fdatasync
+
+if _fsync is None:
+    try:
+        import fcntl
+        if hasattr(fcntl, 'F_FULLFSYNC'):
+            _fsync = lambda fd : fcntl.fcntl(fd, fcntl.F_FULLFSYNC)
+    except (ImportError, AttributeError):
+        pass
+
+if _fsync is None:
+    _fsync = os.fsync
+
 
 # File format
 #
