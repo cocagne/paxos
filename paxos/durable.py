@@ -46,6 +46,10 @@ try:
 except ImportError:
     import pickle
 
+# On platforms without os.fdatasync (eg. OS-X), use fcntl.F_FULLFSYNC instead
+if not hasattr(os,'fdatasync'):
+    import fcntl
+
 # File format
 #
 #  0:  md5sum of file content
@@ -119,8 +123,11 @@ def write( fd, serial_number, pyobject ):
 
     os.write(fd, ''.join([m.digest(), data_serial, data_length, data_pickle]))
 
-    os.fdatasync(fd)
-    
+    if hasattr(os,'fdatasync'):
+        os.fdatasync(fd)
+    else:
+        fcntl.fcntl(fd,fcntl.F_FULLFSYNC)
+
 
 class DurableObjectHandler (object):
     
