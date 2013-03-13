@@ -164,11 +164,11 @@ class Acceptor (essential.Acceptor):
 
     Note that because Paxos permits any combination of dropped packets, not
     every promise/accepted message needs to be sent. This implementation only
-    responds to the last prepare/accept_request message received prior to
-    saving the Acceptor's values to stable media (which is typically a slow
-    process). After saving the promised_id, accepted_id, and accepted_value
-    variables, the "persisted" method must be called to send the pending
-    promise and/or accepted messages.
+    responds to the first prepare/accept_request message received and ignores
+    all others until the Acceptor's values are persisted to stable media (which
+    is typically a slow process). After saving the promised_id, accepted_id,
+    and accepted_value variables, the "persisted" method must be called to send
+    the pending promise and/or accepted messages.
 
     The 'active' attribute is a boolean value indicating whether or not
     the Acceptor should send outgoing messages (defaults to True). Setting
@@ -204,9 +204,10 @@ class Acceptor (essential.Acceptor):
                 self.messenger.send_promise(from_uid, proposal_id, self.accepted_id, self.accepted_value)
         
         elif proposal_id > self.promised_id:
-            self.promised_id = proposal_id
-            if self.active:
-                self.pending_promise = from_uid
+            if self.pending_promise is None:
+                self.promised_id = proposal_id
+                if self.active:
+                    self.pending_promise = from_uid
 
         else:
             if self.active:
@@ -224,11 +225,12 @@ class Acceptor (essential.Acceptor):
                 self.messenger.send_accepted(proposal_id, value)
             
         elif proposal_id >= self.promised_id:
-            self.promised_id      = proposal_id
-            self.accepted_value   = value
-            self.accepted_id      = proposal_id
-            if self.active:
-                self.pending_accepted = from_uid
+            if self.pending_accepted is None:
+                self.promised_id      = proposal_id
+                self.accepted_value   = value
+                self.accepted_id      = proposal_id
+                if self.active:
+                    self.pending_accepted = from_uid
             
         else:
             if self.active:

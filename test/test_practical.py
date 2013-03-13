@@ -286,6 +286,16 @@ class PracticalAcceptorTests (test_essential.EssentialAcceptorTests):
         self.am('promise', 'B', PID(2,'B'), PID(1,'A'), 'foo')
 
 
+    def test_durable_ignore_prepare_override_until_persisted(self):
+        self.a.auto_save = False
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.an()
+        self.a.recv_prepare( 'B', PID(2,'B') )
+        self.an()
+        self.a.persisted()
+        self.am('promise', 'A', PID(1,'A'), None, None)
+
+
     def test_durable_recv_accept_request_promised(self):
         self.a.recv_prepare( 'A', PID(1,'A') )
         self.am('promise', 'A', PID(1,'A'), None, None)
@@ -299,6 +309,18 @@ class PracticalAcceptorTests (test_essential.EssentialAcceptorTests):
         self.am('promise', 'A', PID(1,'A'), None, None)
         self.recover()
         self.a.recv_accept_request('A', PID(5,'A'), 'foo')
+        self.am('accepted', PID(5,'A'), 'foo')
+
+
+    def test_durable_ignore_new_accept_request_until_persisted(self):
+        self.a.recv_prepare( 'A', PID(1,'A') )
+        self.am('promise', 'A', PID(1,'A'), None, None)
+        self.a.auto_save = False
+        self.a.recv_accept_request('A', PID(5,'A'), 'foo')
+        self.an()
+        self.a.recv_accept_request('A', PID(6,'A'), 'foo')
+        self.an()
+        self.a.persisted()
         self.am('accepted', PID(5,'A'), 'foo')
 
 
@@ -326,15 +348,17 @@ class NodeTester(PracticalMessenger, unittest.TestCase):
 
 
 class AutoSaveMixin(object):
+
+    auto_save = True
     
     def recv_prepare(self, from_uid, proposal_id):
         super(AutoSaveMixin, self).recv_prepare(from_uid, proposal_id)
-        if self.persistance_required:
+        if self.persistance_required and self.auto_save:
             self.persisted()
 
     def recv_accept_request(self, from_uid, proposal_id, value):
         super(AutoSaveMixin, self).recv_accept_request(from_uid, proposal_id, value)
-        if self.persistance_required:
+        if self.persistance_required and self.auto_save:
             self.persisted()
 
 
