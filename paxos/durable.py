@@ -46,6 +46,28 @@ try:
 except ImportError:
     import pickle
 
+# This module is primarily concerned with flushing data to the disk. The 
+# default os.fsync goes a bit beyond that so os.fdatasync is used instead
+# if it's available. Failing that, fcntl.fcntl(fd, fcntl.F_FULLSYNC) is
+# attempted (OSX equivalent). Failing that, os.fsync is used (Windows).
+#
+_fsync = None
+
+if hasattr(os, 'fdatasync'):
+    _fsync = os.fdatasync
+
+if _fsync is None:
+    try:
+        import fcntl
+        if hasattr(fcntl, 'F_FULLFSYNC'):
+            _fsync = lambda fd : fcntl.fcntl(fd, fcntl.F_FULLFSYNC)
+    except (ImportError, AttributeError):
+        pass
+
+if _fsync is None:
+    _fsync = os.fsync
+
+
 # File format
 #
 #  0:  md5sum of file content
@@ -119,8 +141,11 @@ def write( fd, serial_number, pyobject ):
 
     os.write(fd, ''.join([m.digest(), data_serial, data_length, data_pickle]))
 
-    os.fdatasync(fd)
-    
+    if hasattr(os,'fdatasync'):
+        os.fdatasync(fd)
+    else:
+        fcntl.fcntl(fd,fcntl.F_FULLFSYNC)
+
 
 class DurableObjectHandler (object):
     
