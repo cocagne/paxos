@@ -54,7 +54,7 @@ recovery.
 
 
 Correct implementations of the Paxos algorithm require saving Acceptor
-state to persistent media prior to sending Prepare and Accept messages over the 
+state to persistent media prior to sending Promise and Accepted messages over the 
 network. This is necessary to ensure that promises made to external entities
 will never be reneged upon should the application crash and recover at an
 inopportune time. This module implements a very simple mechanism for efficiently
