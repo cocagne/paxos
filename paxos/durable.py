@@ -141,10 +141,7 @@ def write( fd, serial_number, pyobject ):
 
     os.write(fd, ''.join([m.digest(), data_serial, data_length, data_pickle]))
 
-    if hasattr(os,'fdatasync'):
-        os.fdatasync(fd)
-    else:
-        fcntl.fcntl(fd,fcntl.F_FULLFSYNC)
+    _fsync(fd)
 
 
 class DurableObjectHandler (object):
