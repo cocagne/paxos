@@ -96,7 +96,7 @@ def read( fd ):
     '''
     Returns: (serial_number, unpickled_object) or raises a FileCorrupted exception
     '''
-    os.lseek(fd, os.SEEK_SET, 0)
+    os.lseek(fd, 0, os.SEEK_SET)
         
     md5hash       = os.read(fd, 16)
     data1         = os.read(fd, 8)
@@ -128,7 +128,7 @@ def read( fd ):
 
     
 def write( fd, serial_number, pyobject ):
-    os.lseek(fd, os.SEEK_SET, 0)
+    os.lseek(fd, 0, os.SEEK_SET)
 
     data_pickle = pickle.dumps(pyobject, pickle.HIGHEST_PROTOCOL)
     data_serial = struct.pack('>Q', serial_number)
