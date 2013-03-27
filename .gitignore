@@ -2,3 +2,5 @@
 *\.pid
 *_trial_temp*
 *\.so\.*
+*\.class
+^bin/*
