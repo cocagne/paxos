@@ -26,6 +26,22 @@ public class ProposalID {
 	public int getUid() {
 		return uid;
 	}
+	
+	public int compare( ProposalID rhs ) {
+		if ( equals(rhs) )
+			return 0;
+		if ( number < rhs.number || uid < rhs.uid )
+			return -1;
+		return 1;
+	}
+	
+	public boolean isGreaterThan( ProposalID rhs ) {
+		return compare(rhs) > 0;
+	}
+	
+	public boolean isLessThan( ProposalID rhs ) {
+		return compare(rhs) < 0;
+	}
 
 	@Override
 	public int hashCode() {

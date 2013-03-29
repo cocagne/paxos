@@ -4,14 +4,14 @@ import java.util.HashSet;
 
 public class EssentialProposer implements Proposer {
 	
-	EssentialMessenger  messenger;
-    int                 proposerUID;
-    int                 quorumSize;
+	private EssentialMessenger  messenger;
+    private int                 proposerUID;
+    private final int           quorumSize;
 
-    ProposalID          proposalID;
-    Object              proposedValue      = null;
-    ProposalID          lastAcceptedID     = null;
-    HashSet<ProposalID> promisesReceived   = new HashSet<ProposalID>();
+    private ProposalID          proposalID;
+    private Object              proposedValue      = null;
+    private ProposalID          lastAcceptedID     = null;
+    private HashSet<Integer>    promisesReceived   = new HashSet<Integer>();
     
     public EssentialProposer(EssentialMessenger messenger, int proposerUID, int quorumSize) {
 		this.messenger   = messenger;
@@ -38,8 +38,47 @@ public class EssentialProposer implements Proposer {
 	@Override
 	public void receivePromise(int fromUID, ProposalID proposalID,
 			ProposalID prevAcceptedID, Object prevAcceptedValue) {
-		// TODO Auto-generated method stub
+
+		if ( !proposalID.equals(this.proposalID) || promisesReceived.contains(fromUID) ) 
+			return;
 		
+        promisesReceived.add( fromUID );
+
+        if (prevAcceptedID.isGreaterThan(lastAcceptedID))
+        {
+        	lastAcceptedID = prevAcceptedID;
+
+        	if (prevAcceptedValue != null)
+        		proposedValue = prevAcceptedValue;
+        }
+        
+        if (promisesReceived.size() == quorumSize)
+        	if (proposedValue != null)
+        		messenger.sendAccept(this.proposalID, proposedValue);
+	}
+
+	public EssentialMessenger getMessenger() {
+		return messenger;
+	}
+
+	public int getProposerUID() {
+		return proposerUID;
+	}
+
+	public int getQuorumSize() {
+		return quorumSize;
+	}
+
+	public ProposalID getProposalID() {
+		return proposalID;
+	}
+
+	public Object getProposedValue() {
+		return proposedValue;
+	}
+
+	public ProposalID getLastAcceptedID() {
+		return lastAcceptedID;
 	}
 
 }

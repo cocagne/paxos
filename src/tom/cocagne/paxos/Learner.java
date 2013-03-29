@@ -4,5 +4,5 @@ public interface Learner {
 
 	public boolean isComplete();
 	
-	public void receiveAccepted(int from_uid, ProposalID proposalID, Object acceptedValue);
+	public void receiveAccepted(int fromUID, ProposalID proposalID, Object acceptedValue);
 }
