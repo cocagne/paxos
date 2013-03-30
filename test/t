@@ -1,0 +1,69 @@
+#!/home/tcocagne/jython2.7b1/jython
+
+import sys
+import os.path
+import unittest
+
+#sys.path.append
+this_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append( os.path.join(os.path.dirname(this_dir),'bin') )
+
+from tom.cocagne.paxos import ProposalID
+from tom.cocagne import paxos
+
+import test_essential
+
+def PID(proposalID):
+    if proposalID is not None:
+        return test_essential.PID(proposalID.getNumber(), proposalID.getUID())
+
+class EssentialMessengerAdapter (paxos.EssentialMessenger, test_essential.EssentialMessenger):
+
+    def sendPrepare(self, proposalID):
+        self.send_prepare(PID(proposalID))
+
+    def sendPromise(self, proposerUID, proposalID, previousID, acceptedValue):
+        self.send_promise(proposerUID, PID(proposalID), PID(previousID), acceptedValue)
+
+    def sendAccept(self, proposalID, proposalValue):
+        self.send_accept(PID(proposalID), proposalValue)
+
+    def sendAccepted(self, proposalID, acceptedValue):
+        self.send_accepted(PID(proposalID), acceptedValue)
+    
+    def onResolution(self, proposalID, value):
+        self.on_resolution(PID(proposalID), value)
+
+
+class AcceptorAdapter(paxos.EssentialAcceptor):
+
+    @property
+    def promised_id(self):
+        return PID(self.getPromisedID())
+
+    @property
+    def accepted_id(self):
+        return PID(self.getAcceptedID())
+
+    @property
+    def accepted_value(self):
+        return self.getAcceptedValue()
+
+    def recv_prepare(self, from_uid, proposal_id):
+        self.receivePrepare(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid))
+
+    def recv_accept_request(self, from_uid, proposal_id, value):
+        self.receiveAcceptRequest(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid), value)
+
+        
+class EssentialAcceptorTester(test_essential.EssentialAcceptorTests, EssentialMessengerAdapter, unittest.TestCase):
+
+    def __init__(self, test_name):
+        unittest.TestCase.__init__(self, test_name)
+        
+    def acceptor_factory(self, messenger, uid, quorum_size):
+        return AcceptorAdapter(messenger)
+
+    
+if __name__ == '__main__':
+    unittest.main()
