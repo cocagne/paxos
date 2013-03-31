@@ -19,7 +19,7 @@ public class EssentialLearner implements Learner {
 	private final EssentialMessenger      messenger;
 	private final int                     quorumSize;
 	private HashMap<ProposalID, Proposal> proposals       = new HashMap<ProposalID, Proposal>();
-	private HashMap<Integer, ProposalID>  acceptors       = new HashMap<Integer, ProposalID>();
+	private HashMap<String,  ProposalID>  acceptors       = new HashMap<String, ProposalID>();
 	private Object                        finalValue      = null;
 	private ProposalID                    finalProposalID = null;
 	
@@ -34,7 +34,7 @@ public class EssentialLearner implements Learner {
 	}
 
 	@Override
-	public void receiveAccepted(int fromUID, ProposalID proposalID,
+	public void receiveAccepted(String fromUID, ProposalID proposalID,
 			Object acceptedValue) {
 		
 		if (isComplete())

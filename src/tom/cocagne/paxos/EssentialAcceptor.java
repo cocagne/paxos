@@ -12,21 +12,21 @@ public class EssentialAcceptor implements Acceptor {
 	}
 
 	@Override
-	public void receivePrepare(int fromUID, ProposalID proposalID) {
+	public void receivePrepare(String fromUID, ProposalID proposalID) {
 		
-		if (proposalID.equals(promisedID)) { // duplicate message
+		if (this.promisedID != null && proposalID.equals(promisedID)) { // duplicate message
 			messenger.sendPromise(fromUID, proposalID, acceptedID, acceptedValue);
 		}
-		else if (proposalID.isGreaterThan(promisedID)) {
+		else if (this.promisedID == null || proposalID.isGreaterThan(promisedID)) {
 			promisedID = proposalID;
 			messenger.sendPromise(fromUID, proposalID, acceptedID, acceptedValue);
 		}
 	}
 
 	@Override
-	public void receiveAcceptRequest(int fromUID, ProposalID proposalID,
+	public void receiveAcceptRequest(String fromUID, ProposalID proposalID,
 			Object value) {
-		if (proposalID.isGreaterThan(promisedID) || proposalID.equals(promisedID)) {
+		if (promisedID == null || proposalID.isGreaterThan(promisedID) || proposalID.equals(promisedID)) {
 			promisedID    = proposalID;
 			acceptedID    = proposalID;
 			acceptedValue = value;

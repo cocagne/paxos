@@ -35,6 +35,40 @@ class EssentialMessengerAdapter (paxos.EssentialMessenger, test_essential.Essent
         self.on_resolution(PID(proposalID), value)
 
 
+class ProposerAdapter(paxos.EssentialProposer):
+
+    @property
+    def proposer_uid(self):
+        return self.getProposerUID()
+
+    @property
+    def quorum_size(self):
+        return self.getQuorumSize()
+    
+    @property
+    def proposed_value(self):
+        return self.getProposedValue()
+    
+    @property
+    def proposal_id(self):
+        return PID(self.getProposalID())
+
+    @property
+    def last_accepted_id(self):
+        return PID(self.getLastAcceptedID())
+
+    def set_proposal(self, value):
+        self.setProposal(value)
+        
+    def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
+        if prev_accepted_id is not None:
+            prev_accepted_id = paxos.ProposalID(prev_accepted_id.number, prev_accepted_id.uid)
+
+        self.receivePromise(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid),
+                            prev_accepted_id, prev_accepted_value)
+
+
+        
 class AcceptorAdapter(paxos.EssentialAcceptor):
 
     @property
@@ -63,6 +97,15 @@ class EssentialAcceptorTester(test_essential.EssentialAcceptorTests, EssentialMe
         
     def acceptor_factory(self, messenger, uid, quorum_size):
         return AcceptorAdapter(messenger)
+
+
+class EssentialProposerTester(test_essential.EssentialProposerTests, EssentialMessengerAdapter, unittest.TestCase):
+
+    def __init__(self, test_name):
+        unittest.TestCase.__init__(self, test_name)
+        
+    def proposer_factory(self, messenger, uid, quorum_size):
+        return ProposerAdapter(messenger, uid, quorum_size)
 
     
 if __name__ == '__main__':

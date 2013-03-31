@@ -88,6 +88,12 @@ class EssentialProposerTests (object):
         if hasattr(self.p, 'leader'):
             self.assertEquals( self.p.leader, value )
 
+    def num_promises(self):
+        if hasattr(self.p, 'promises_rcvd'):
+            return len(self.p.promises_rcvd) # python version
+        else:
+            return self.p.numPromises() # java version
+
         
     def test_set_proposal_no_value(self):
         self.ae( self.p.proposed_value, None )
@@ -97,7 +103,7 @@ class EssentialProposerTests (object):
 
         
     def test_set_proposal_with_previous_value(self):
-        self.p.proposed_value = 'foo'
+        self.p.set_proposal( 'foo' )
         self.p.set_proposal( 'bar' )
         self.ae( self.p.proposed_value, 'foo' )
         self.an()
@@ -122,34 +128,35 @@ class EssentialProposerTests (object):
     def test_prepare_with_promises_rcvd(self):
         self.p.prepare()
         self.am('prepare', PID(1, 'A'))
-        self.ae( len(self.p.promises_rcvd), 0 )
+        self.ae( self.num_promises(), 0 )
         self.p.recv_promise('B', PID(1,'A'), None, None)
-        self.ae( len(self.p.promises_rcvd), 1 )
+        self.ae( self.num_promises(), 1 )
         self.p.prepare()
         self.am('prepare', PID(2,'A'))
-        self.ae( len(self.p.promises_rcvd), 0 )
+        self.ae( self.num_promises(), 0 )
 
         
     def test_recv_promise_ignore_other_nodes(self):
         self.p.prepare()
         self.am('prepare', PID(1,'A'))
-        self.ae( len(self.p.promises_rcvd), 0 )
+        self.ae( self.num_promises(), 0 )
         self.p.recv_promise( 'B', PID(1,'B'), None, None )
-        self.ae( len(self.p.promises_rcvd), 0 )
+        self.ae( self.num_promises(), 0 )
     
         
     def test_recv_promise_ignore_duplicate_response(self):
         self.p.prepare()
         self.am('prepare', PID(1,'A'))
-        self.ae( len(self.p.promises_rcvd), 0 )
+        self.ae( self.num_promises(), 0 )
         self.p.recv_promise( 'B', PID(1,'A'), None, None )
-        self.ae( len(self.p.promises_rcvd), 1 )
+        self.ae( self.num_promises(), 1 )
         self.p.recv_promise( 'B', PID(1,'A'), None, None )
-        self.ae( len(self.p.promises_rcvd), 1 )
+        self.ae( self.num_promises(), 1 )
 
 
     def test_recv_promise_set_proposal_from_null(self):
-        self.p.next_proposal_number = 2
+        self.p.prepare()
+        self.clear_msgs()
         self.p.prepare()
         self.am('prepare', PID(2,'A'))
         self.ae( self.p.last_accepted_id, None )
@@ -160,22 +167,26 @@ class EssentialProposerTests (object):
 
         
     def test_recv_promise_override_previous_proposal_value(self):
-        self.p.next_proposal_number = 4
+        self.p.prepare()
+        self.p.prepare()
+        self.p.prepare()
+        self.p.recv_promise( 'B', PID(3,'A'), PID(1,'B'), 'foo' )
+        self.clear_msgs()
         self.p.prepare()
         self.am('prepare', PID(4,'A'))
-        self.p.last_accepted_id = PID(1,'B')
-        self.p.proposed_value   = 'foo'
         self.p.recv_promise( 'B', PID(4,'A'), PID(3,'B'), 'bar' )
         self.ae( self.p.last_accepted_id, PID(3,'B') )
         self.ae( self.p.proposed_value, 'bar' )
 
         
     def test_recv_promise_ignore_previous_proposal_value(self):
-        self.p.next_proposal_number = 4
+        self.p.prepare()
+        self.p.prepare()
+        self.p.prepare()
+        self.p.recv_promise( 'B', PID(3,'A'), PID(1,'B'), 'foo' )
+        self.clear_msgs()
         self.p.prepare()
         self.am('prepare', PID(4,'A'))
-        self.p.last_accepted_id = PID(1,'B')
-        self.p.proposed_value   = 'foo'
         self.p.recv_promise( 'B', PID(4,'A'), PID(3,'B'), 'bar' )
         self.ae( self.p.last_accepted_id, PID(3,'B') )
         self.ae( self.p.proposed_value, 'bar' )

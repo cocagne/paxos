@@ -3,10 +3,10 @@ package tom.cocagne.paxos;
 public class ProposalID {
 	
 
-	private int       number;
-	private final int uid;
+	private int          number;
+	private final String uid;
 	
-	public ProposalID(int number, int uid) {
+	public ProposalID(int number, String uid) {
 		this.number = number;
 		this.uid    = uid;
 	}
@@ -23,14 +23,14 @@ public class ProposalID {
 		this.number += 1;
 	}
 
-	public int getUid() {
+	public String getUID() {
 		return uid;
 	}
 	
 	public int compare( ProposalID rhs ) {
 		if ( equals(rhs) )
 			return 0;
-		if ( number < rhs.number || uid < rhs.uid )
+		if ( number < rhs.number || (number == rhs.number && uid.compareTo(rhs.uid) < 0) )
 			return -1;
 		return 1;
 	}
@@ -48,7 +48,7 @@ public class ProposalID {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + number;
-		result = prime * result + uid;
+		result = prime * result + ((uid == null) ? 0 : uid.hashCode());
 		return result;
 	}
 
@@ -63,8 +63,13 @@ public class ProposalID {
 		ProposalID other = (ProposalID) obj;
 		if (number != other.number)
 			return false;
-		if (uid != other.uid)
+		if (uid == null) {
+			if (other.uid != null)
+				return false;
+		} else if (!uid.equals(other.uid))
 			return false;
 		return true;
 	}
+
+	
 }

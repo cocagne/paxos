@@ -6,6 +6,6 @@ public interface Proposer {
 	
 	public void prepare();
 	
-	public void receivePromise(int fromUID, ProposalID proposalID, ProposalID prevAcceptedID, Object prevAcceptedValue);
+	public void receivePromise(String fromUID, ProposalID proposalID, ProposalID prevAcceptedID, Object prevAcceptedValue);
 
 }

@@ -6,7 +6,7 @@ public interface EssentialMessenger {
 
 	public void sendPrepare(ProposalID proposalID);
 
-	public void sendPromise(int proposerUID, ProposalID proposalID, ProposalID previousID, Object acceptedValue);
+	public void sendPromise(String proposerUID, ProposalID proposalID, ProposalID previousID, Object acceptedValue);
 
 	public void sendAccept(ProposalID proposalID, Object proposalValue);
 

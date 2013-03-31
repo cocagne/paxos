@@ -4,16 +4,16 @@ import java.util.HashSet;
 
 public class EssentialProposer implements Proposer {
 	
-	private EssentialMessenger  messenger;
-    private int                 proposerUID;
-    private final int           quorumSize;
+	protected EssentialMessenger  messenger;
+    protected String              proposerUID;
+    protected final int           quorumSize;
 
-    private ProposalID          proposalID;
-    private Object              proposedValue      = null;
-    private ProposalID          lastAcceptedID     = null;
-    private HashSet<Integer>    promisesReceived   = new HashSet<Integer>();
+    protected ProposalID          proposalID;
+    protected Object              proposedValue      = null;
+    protected ProposalID          lastAcceptedID     = null;
+    protected HashSet<String>     promisesReceived   = new HashSet<String>();
     
-    public EssentialProposer(EssentialMessenger messenger, int proposerUID, int quorumSize) {
+    public EssentialProposer(EssentialMessenger messenger, String proposerUID, int quorumSize) {
 		this.messenger   = messenger;
 		this.proposerUID = proposerUID;
 		this.quorumSize  = quorumSize;
@@ -36,7 +36,7 @@ public class EssentialProposer implements Proposer {
 	}
 
 	@Override
-	public void receivePromise(int fromUID, ProposalID proposalID,
+	public void receivePromise(String fromUID, ProposalID proposalID,
 			ProposalID prevAcceptedID, Object prevAcceptedValue) {
 
 		if ( !proposalID.equals(this.proposalID) || promisesReceived.contains(fromUID) ) 
@@ -44,7 +44,7 @@ public class EssentialProposer implements Proposer {
 		
         promisesReceived.add( fromUID );
 
-        if (prevAcceptedID.isGreaterThan(lastAcceptedID))
+        if (lastAcceptedID == null || prevAcceptedID.isGreaterThan(lastAcceptedID))
         {
         	lastAcceptedID = prevAcceptedID;
 
@@ -61,7 +61,7 @@ public class EssentialProposer implements Proposer {
 		return messenger;
 	}
 
-	public int getProposerUID() {
+	public String getProposerUID() {
 		return proposerUID;
 	}
 
@@ -80,5 +80,8 @@ public class EssentialProposer implements Proposer {
 	public ProposalID getLastAcceptedID() {
 		return lastAcceptedID;
 	}
-
+	
+	public int numPromises() {
+		return promisesReceived.size();
+	}
 }
