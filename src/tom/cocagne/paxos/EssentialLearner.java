@@ -30,7 +30,7 @@ public class EssentialLearner implements Learner {
 
 	@Override
 	public boolean isComplete() {
-		return finalValue == null;
+		return finalValue != null;
 	}
 
 	@Override
@@ -42,7 +42,7 @@ public class EssentialLearner implements Learner {
 
 		ProposalID oldPID = acceptors.get(fromUID);
 		
-		if (oldPID != null && proposalID.isGreaterThan(oldPID))
+		if (oldPID != null && !proposalID.isGreaterThan(oldPID))
 			return;
 		
 		acceptors.put(fromUID, proposalID);

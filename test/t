@@ -89,7 +89,42 @@ class AcceptorAdapter(paxos.EssentialAcceptor):
     def recv_accept_request(self, from_uid, proposal_id, value):
         self.receiveAcceptRequest(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid), value)
 
+
+
+class LearnerAdapter(paxos.EssentialLearner):
+
+    @property
+    def quorum_size(self):
+        return self.getQuorumSize()
+
+    @property
+    def complete(self):
+        return self.isComplete()
+
+    @property
+    def final_value(self):
+        return self.getFinalValue()
+
+    @property
+    def final_proposal_id(self):
+        return PID(self.getFinalProposalID())
+
+    def recv_accepted(self, from_uid, proposal_id, accepted_value):
+        self.receiveAccepted(from_uid,
+                             paxos.ProposalID(proposal_id.number, proposal_id.uid),
+                             accepted_value)
+
+
         
+class EssentialProposerTester(test_essential.EssentialProposerTests, EssentialMessengerAdapter, unittest.TestCase):
+
+    def __init__(self, test_name):
+        unittest.TestCase.__init__(self, test_name)
+        
+    def proposer_factory(self, messenger, uid, quorum_size):
+        return ProposerAdapter(messenger, uid, quorum_size)
+
+
 class EssentialAcceptorTester(test_essential.EssentialAcceptorTests, EssentialMessengerAdapter, unittest.TestCase):
 
     def __init__(self, test_name):
@@ -99,13 +134,15 @@ class EssentialAcceptorTester(test_essential.EssentialAcceptorTests, EssentialMe
         return AcceptorAdapter(messenger)
 
 
-class EssentialProposerTester(test_essential.EssentialProposerTests, EssentialMessengerAdapter, unittest.TestCase):
+class EssentialLearnerTester(test_essential.EssentialLearnerTests, EssentialMessengerAdapter, unittest.TestCase):
 
     def __init__(self, test_name):
         unittest.TestCase.__init__(self, test_name)
         
-    def proposer_factory(self, messenger, uid, quorum_size):
-        return ProposerAdapter(messenger, uid, quorum_size)
+    def learner_factory(self, messenger, uid, quorum_size):
+        return LearnerAdapter(messenger, quorum_size)
+
+
 
     
 if __name__ == '__main__':
