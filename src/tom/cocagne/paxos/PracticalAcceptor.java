@@ -42,18 +42,42 @@ public class PracticalAcceptor extends EssentialAcceptor {
 	@Override
 	public void receiveAcceptRequest(String fromUID, ProposalID proposalID,
 			Object value) {
-		if (acceptedID != null and proposalID.equals(acceptedID) && acceptedValue != null && acceptedValue.equals(value))
+		if (acceptedID != null && proposalID.equals(acceptedID) && acceptedValue.equals(value)) {
 			if (active)
 				messenger.sendAccepted(proposalID, value);
-			
-		if (promisedID == null || proposalID.isGreaterThan(promisedID) || proposalID.equals(promisedID)) {
-			promisedID    = proposalID;
-			acceptedID    = proposalID;
-			acceptedValue = value;
-			
-			messenger.sendAccepted(acceptedID, acceptedValue);
+		}
+		else if (promisedID == null || proposalID.isGreaterThan(promisedID) || proposalID.equals(promisedID)) {
+			if (pendingAccepted == null) {
+				promisedID    = proposalID;
+				acceptedID    = proposalID;
+				acceptedValue = value;
+				
+				if (active)
+					pendingAccepted = fromUID;
+			}
+		}
+		else {
+			if (active)
+				((PracticalMessenger)messenger).sendAcceptNACK(fromUID, proposalID, promisedID);
 		}
 	}
 	
-	//messenger.sendPromise(fromUID, proposalID, acceptedID, acceptedValue);
+	public void persisted() {
+		if (active) {
+			if (pendingPromise != null)
+				messenger.sendPromise(pendingPromise, promisedID, acceptedID, acceptedValue);
+			if (pendingAccepted != null)
+				messenger.sendAccepted(acceptedID, acceptedValue);
+		}
+		pendingPromise  = null;
+		pendingAccepted = null;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
+	}
 }

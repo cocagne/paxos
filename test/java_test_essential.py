@@ -17,7 +17,7 @@ def PID(proposalID):
     if proposalID is not None:
         return test_essential.PID(proposalID.getNumber(), proposalID.getUID())
 
-class EssentialMessengerAdapter (paxos.EssentialMessenger, test_essential.EssentialMessenger):
+class MessengerAdapter (object):
 
     def sendPrepare(self, proposalID):
         self.send_prepare(PID(proposalID))
@@ -35,7 +35,12 @@ class EssentialMessengerAdapter (paxos.EssentialMessenger, test_essential.Essent
         self.on_resolution(PID(proposalID), value)
 
 
-class ProposerAdapter(paxos.EssentialProposer):
+class EssentialMessengerAdapter(MessengerAdapter, paxos.EssentialMessenger, test_essential.EssentialMessenger):
+    pass
+
+
+
+class ProposerAdapter(object):
 
     @property
     def proposer_uid(self):
@@ -69,7 +74,7 @@ class ProposerAdapter(paxos.EssentialProposer):
 
 
         
-class AcceptorAdapter(paxos.EssentialAcceptor):
+class AcceptorAdapter(object):
 
     @property
     def promised_id(self):
@@ -91,7 +96,7 @@ class AcceptorAdapter(paxos.EssentialAcceptor):
 
 
 
-class LearnerAdapter(paxos.EssentialLearner):
+class LearnerAdapter(object):
 
     @property
     def quorum_size(self):
@@ -114,6 +119,15 @@ class LearnerAdapter(paxos.EssentialLearner):
                              paxos.ProposalID(proposal_id.number, proposal_id.uid),
                              accepted_value)
 
+        
+class EssentialProposerAdapter(paxos.EssentialProposer, ProposerAdapter):
+    pass
+
+class EssentialAcceptorAdapter(paxos.EssentialAcceptor, AcceptorAdapter):
+    pass
+
+class EssentialLearnerAdapter(paxos.EssentialLearner, LearnerAdapter):
+    pass
 
         
 class EssentialProposerTester(test_essential.EssentialProposerTests, EssentialMessengerAdapter, unittest.TestCase):
@@ -122,7 +136,7 @@ class EssentialProposerTester(test_essential.EssentialProposerTests, EssentialMe
         unittest.TestCase.__init__(self, test_name)
         
     def proposer_factory(self, messenger, uid, quorum_size):
-        return ProposerAdapter(messenger, uid, quorum_size)
+        return EssentialProposerAdapter(messenger, uid, quorum_size)
 
 
 class EssentialAcceptorTester(test_essential.EssentialAcceptorTests, EssentialMessengerAdapter, unittest.TestCase):
@@ -131,7 +145,7 @@ class EssentialAcceptorTester(test_essential.EssentialAcceptorTests, EssentialMe
         unittest.TestCase.__init__(self, test_name)
         
     def acceptor_factory(self, messenger, uid, quorum_size):
-        return AcceptorAdapter(messenger)
+        return EssentialAcceptorAdapter(messenger)
 
 
 class EssentialLearnerTester(test_essential.EssentialLearnerTests, EssentialMessengerAdapter, unittest.TestCase):
@@ -140,7 +154,7 @@ class EssentialLearnerTester(test_essential.EssentialLearnerTests, EssentialMess
         unittest.TestCase.__init__(self, test_name)
         
     def learner_factory(self, messenger, uid, quorum_size):
-        return LearnerAdapter(messenger, quorum_size)
+        return EssentialLearnerAdapter(messenger, quorum_size)
 
 
 

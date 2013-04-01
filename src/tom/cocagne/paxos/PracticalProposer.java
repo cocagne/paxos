@@ -40,7 +40,7 @@ public class PracticalProposer extends EssentialProposer {
 	
 	public void observeProposal(String fromUID, ProposalID proposalID) {
 		if (proposalID.isGreaterThan(this.proposalID))
-			this.proposalID.setNumber(proposalID.getNumber() + 1);
+			this.proposalID.setNumber(proposalID.getNumber());
 	}
 	
 	public void receivePrepareNACK(String proposerUID, ProposalID proposalID, ProposalID promisedID) {
@@ -78,8 +78,24 @@ public class PracticalProposer extends EssentialProposer {
         if (promisesReceived.size() == quorumSize) {
         	leader = true;
         	((PracticalMessenger)messenger).onLeadershipAcquired();
-        	if (proposedValue != null)
+        	if (proposedValue != null && active)
         		messenger.sendAccept(this.proposalID, proposedValue);
         }
+	}
+
+	public boolean isLeader() {
+		return leader;
+	}
+
+	public void setLeader(boolean leader) {
+		this.leader = leader;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
 	}
 }
