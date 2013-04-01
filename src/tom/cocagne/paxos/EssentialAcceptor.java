@@ -2,10 +2,10 @@ package tom.cocagne.paxos;
 
 public class EssentialAcceptor implements Acceptor {
 	
-	private EssentialMessenger messenger;
-	private ProposalID         promisedID;
-	private ProposalID         acceptedID;
-	private Object             acceptedValue;
+	protected EssentialMessenger messenger;
+	protected ProposalID         promisedID;
+	protected ProposalID         acceptedID;
+	protected Object             acceptedValue;
 
 	public EssentialAcceptor( EssentialMessenger messenger ) {
 		this.messenger = messenger;
