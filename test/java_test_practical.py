@@ -18,7 +18,8 @@ import java_test_essential
 from java_test_essential import PID
 
 def JPID(pid):
-    return paxos.ProposalID(pid.number, pid.uid)
+    return paxos.ProposalID(pid.number, pid.uid) if pid is not None else None
+
 
 class MessengerAdapter (java_test_essential.MessengerAdapter):
 
@@ -68,11 +69,25 @@ class ProposerAdapter(paxos.PracticalProposer, java_test_essential.ProposerAdapt
     def resend_accept(self):
         self.resendAccept()
 
-    def XXprepare(self, increment=True):
-        if increment:
-            paxos.PracticalProposer.prepare(self)
-        else:
-            paxos.PracticalProposer.prepareWithoutIncrement(self)
+
+
+class AcceptorAdapter(paxos.PracticalAcceptor, test_practical.AutoSaveMixin, java_test_essential.AcceptorAdapter):
+
+    @property
+    def active(self):
+        return self.isActive()
+
+    @active.setter
+    def active(self, value):
+        self.setActive(value)
+
+    @property
+    def persistance_required(self):
+        return self.persistenceRequired()
+
+    def recover(self, promised_id, accepted_id, accepted_value):
+        paxos.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
+
 
 
 
@@ -83,6 +98,15 @@ class PracticalProposerTester(test_practical.PracticalProposerTests, PracticalMe
         
     def proposer_factory(self, messenger, uid, quorum_size):
         return ProposerAdapter(messenger, uid, quorum_size)
+
+
+class PracticalAcceptorTester(test_practical.PracticalAcceptorTests, PracticalMessengerAdapter, unittest.TestCase):
+
+    def __init__(self, test_name):
+        unittest.TestCase.__init__(self, test_name)
+        
+    def acceptor_factory(self, messenger, uid, quorum_size):
+        return AcceptorAdapter(messenger)
 
 
     
