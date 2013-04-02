@@ -39,7 +39,8 @@ class PracticalMessengerAdapter(MessengerAdapter, paxos.PracticalMessenger, test
 
 
 
-class ProposerAdapter(paxos.PracticalProposer, java_test_essential.ProposerAdapter):
+
+class GenericProposerAdapter(java_test_essential.ProposerAdapter):
 
     @property
     def leader(self):
@@ -70,8 +71,14 @@ class ProposerAdapter(paxos.PracticalProposer, java_test_essential.ProposerAdapt
         self.resendAccept()
 
 
+class ProposerAdapter(paxos.PracticalProposer, GenericProposerAdapter):
+    pass
 
-class AcceptorAdapter(paxos.PracticalAcceptor, test_practical.AutoSaveMixin, java_test_essential.AcceptorAdapter):
+class NodeProposerAdapter(paxos.PracticalNode, GenericProposerAdapter):
+    pass
+
+
+class GenericAcceptorAdapter(test_practical.AutoSaveMixin, java_test_essential.AcceptorAdapter):
 
     @property
     def active(self):
@@ -85,10 +92,18 @@ class AcceptorAdapter(paxos.PracticalAcceptor, test_practical.AutoSaveMixin, jav
     def persistance_required(self):
         return self.persistenceRequired()
 
+    #def recover(self, promised_id, accepted_id, accepted_value):
+    #    paxos.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
+
+
+class AcceptorAdapter(paxos.PracticalAcceptor, GenericAcceptorAdapter):
     def recover(self, promised_id, accepted_id, accepted_value):
         paxos.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
 
 
+class NodeAcceptorAdapter(paxos.PracticalNode, GenericAcceptorAdapter):
+    def recover(self, promised_id, accepted_id, accepted_value):
+        paxos.PracticalNode.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
 
 
 class PracticalProposerTester(test_practical.PracticalProposerTests, PracticalMessengerAdapter, unittest.TestCase):
@@ -107,6 +122,24 @@ class PracticalAcceptorTester(test_practical.PracticalAcceptorTests, PracticalMe
         
     def acceptor_factory(self, messenger, uid, quorum_size):
         return AcceptorAdapter(messenger)
+
+
+class PracticalNodeProposerTester(test_practical.PracticalProposerTests, PracticalMessengerAdapter, unittest.TestCase):
+
+    def __init__(self, test_name):
+        unittest.TestCase.__init__(self, test_name)
+        
+    def proposer_factory(self, messenger, uid, quorum_size):
+        return NodeProposerAdapter(messenger, uid, quorum_size)
+
+
+class PracticalNodeAcceptorTester(test_practical.PracticalAcceptorTests, PracticalMessengerAdapter, unittest.TestCase):
+
+    def __init__(self, test_name):
+        unittest.TestCase.__init__(self, test_name)
+        
+    def acceptor_factory(self, messenger, uid, quorum_size):
+        return NodeAcceptorAdapter(messenger, uid, quorum_size)
 
 
     
