@@ -4,7 +4,7 @@ public interface HeartbeatMessenger extends PracticalMessenger {
 	
 	public void sendHeartbeat( ProposalID leaderProposalID);
 	
-	public void schedule(int millisecondDelay, HeartbeatCallback callback);
+	public void schedule(long millisecondDelay, HeartbeatCallback callback);
 	
 	public void onLeadershipLost();
 	
