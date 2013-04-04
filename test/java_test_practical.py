@@ -8,8 +8,8 @@ import unittest
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append( os.path.join(os.path.dirname(this_dir),'bin') )
 
-from tom.cocagne.paxos import ProposalID
-from tom.cocagne import paxos
+from cocagne.paxos.essential import ProposalID
+from cocagne.paxos import practical, essential
 
 import test_essential
 import test_practical
@@ -18,7 +18,7 @@ import java_test_essential
 from java_test_essential import PID
 
 def JPID(pid):
-    return paxos.ProposalID(pid.number, pid.uid) if pid is not None else None
+    return essential.ProposalID(pid.number, pid.uid) if pid is not None else None
 
 
 class MessengerAdapter (java_test_essential.MessengerAdapter):
@@ -33,7 +33,7 @@ class MessengerAdapter (java_test_essential.MessengerAdapter):
         self.on_leadership_acquired()
 
 
-class PracticalMessengerAdapter(MessengerAdapter, paxos.PracticalMessenger, test_practical.PracticalMessenger):
+class PracticalMessengerAdapter(MessengerAdapter, practical.PracticalMessenger, test_practical.PracticalMessenger):
     pass
 
 
@@ -71,10 +71,10 @@ class GenericProposerAdapter(java_test_essential.ProposerAdapter):
         self.resendAccept()
 
 
-class ProposerAdapter(paxos.PracticalProposer, GenericProposerAdapter):
+class ProposerAdapter(practical.PracticalProposerImpl, GenericProposerAdapter):
     pass
 
-class NodeProposerAdapter(paxos.PracticalNode, GenericProposerAdapter):
+class NodeProposerAdapter(practical.PracticalNode, GenericProposerAdapter):
     pass
 
 
@@ -93,17 +93,17 @@ class GenericAcceptorAdapter(test_practical.AutoSaveMixin, java_test_essential.A
         return self.persistenceRequired()
 
     #def recover(self, promised_id, accepted_id, accepted_value):
-    #    paxos.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
+    #    practical.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
 
 
-class AcceptorAdapter(paxos.PracticalAcceptor, GenericAcceptorAdapter):
+class AcceptorAdapter(practical.PracticalAcceptorImpl, GenericAcceptorAdapter):
     def recover(self, promised_id, accepted_id, accepted_value):
-        paxos.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
+        practical.PracticalAcceptor.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
 
 
-class NodeAcceptorAdapter(paxos.PracticalNode, GenericAcceptorAdapter):
+class NodeAcceptorAdapter(practical.PracticalNode, GenericAcceptorAdapter):
     def recover(self, promised_id, accepted_id, accepted_value):
-        paxos.PracticalNode.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
+        practical.PracticalNode.recover(self, JPID(promised_id), JPID(accepted_id), accepted_value)
 
 
 class PracticalProposerTester(test_practical.PracticalProposerTests, PracticalMessengerAdapter, unittest.TestCase):

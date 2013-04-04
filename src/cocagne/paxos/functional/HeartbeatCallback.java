@@ -1,4 +1,4 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.functional;
 
 public interface HeartbeatCallback {
 	

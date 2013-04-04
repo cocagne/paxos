@@ -1,13 +1,14 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.essential;
 
-public class EssentialAcceptor implements Acceptor {
+
+public class EssentialAcceptorImpl implements EssentialAcceptor {
 	
 	protected EssentialMessenger messenger;
 	protected ProposalID         promisedID;
 	protected ProposalID         acceptedID;
 	protected Object             acceptedValue;
 
-	public EssentialAcceptor( EssentialMessenger messenger ) {
+	public EssentialAcceptorImpl( EssentialMessenger messenger ) {
 		this.messenger = messenger;
 	}
 

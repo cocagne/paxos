@@ -1,4 +1,7 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.functional;
+
+import cocagne.paxos.essential.ProposalID;
+import cocagne.paxos.practical.PracticalMessenger;
 
 public interface HeartbeatMessenger extends PracticalMessenger {
 	

@@ -8,8 +8,8 @@ import unittest
 this_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append( os.path.join(os.path.dirname(this_dir),'bin') )
 
-from tom.cocagne.paxos import ProposalID
-from tom.cocagne import paxos
+from cocagne.paxos.essential import ProposalID
+from cocagne.paxos import essential
 
 import test_essential
 
@@ -35,7 +35,7 @@ class MessengerAdapter (object):
         self.on_resolution(PID(proposalID), value)
 
 
-class EssentialMessengerAdapter(MessengerAdapter, paxos.EssentialMessenger, test_essential.EssentialMessenger):
+class EssentialMessengerAdapter(MessengerAdapter, essential.EssentialMessenger, test_essential.EssentialMessenger):
     pass
 
 
@@ -67,9 +67,9 @@ class ProposerAdapter(object):
         
     def recv_promise(self, from_uid, proposal_id, prev_accepted_id, prev_accepted_value):
         if prev_accepted_id is not None:
-            prev_accepted_id = paxos.ProposalID(prev_accepted_id.number, prev_accepted_id.uid)
+            prev_accepted_id = essential.ProposalID(prev_accepted_id.number, prev_accepted_id.uid)
 
-        self.receivePromise(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid),
+        self.receivePromise(from_uid, essential.ProposalID(proposal_id.number, proposal_id.uid),
                             prev_accepted_id, prev_accepted_value)
 
 
@@ -89,10 +89,10 @@ class AcceptorAdapter(object):
         return self.getAcceptedValue()
 
     def recv_prepare(self, from_uid, proposal_id):
-        self.receivePrepare(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid))
+        self.receivePrepare(from_uid, essential.ProposalID(proposal_id.number, proposal_id.uid))
 
     def recv_accept_request(self, from_uid, proposal_id, value):
-        self.receiveAcceptRequest(from_uid, paxos.ProposalID(proposal_id.number, proposal_id.uid), value)
+        self.receiveAcceptRequest(from_uid, essential.ProposalID(proposal_id.number, proposal_id.uid), value)
 
 
 
@@ -116,17 +116,17 @@ class LearnerAdapter(object):
 
     def recv_accepted(self, from_uid, proposal_id, accepted_value):
         self.receiveAccepted(from_uid,
-                             paxos.ProposalID(proposal_id.number, proposal_id.uid),
+                             essential.ProposalID(proposal_id.number, proposal_id.uid),
                              accepted_value)
 
         
-class EssentialProposerAdapter(paxos.EssentialProposer, ProposerAdapter):
+class EssentialProposerAdapter(essential.EssentialProposerImpl, ProposerAdapter):
     pass
 
-class EssentialAcceptorAdapter(paxos.EssentialAcceptor, AcceptorAdapter):
+class EssentialAcceptorAdapter(essential.EssentialAcceptorImpl, AcceptorAdapter):
     pass
 
-class EssentialLearnerAdapter(paxos.EssentialLearner, LearnerAdapter):
+class EssentialLearnerAdapter(essential.EssentialLearnerImpl, LearnerAdapter):
     pass
 
         

@@ -1,8 +1,9 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.essential;
 
 import java.util.HashSet;
 
-public class EssentialProposer implements Proposer {
+
+public class EssentialProposerImpl implements EssentialProposer {
 	
 	protected EssentialMessenger  messenger;
     protected String              proposerUID;
@@ -13,7 +14,7 @@ public class EssentialProposer implements Proposer {
     protected ProposalID          lastAcceptedID     = null;
     protected HashSet<String>     promisesReceived   = new HashSet<String>();
     
-    public EssentialProposer(EssentialMessenger messenger, String proposerUID, int quorumSize) {
+    public EssentialProposerImpl(EssentialMessenger messenger, String proposerUID, int quorumSize) {
 		this.messenger   = messenger;
 		this.proposerUID = proposerUID;
 		this.quorumSize  = quorumSize;

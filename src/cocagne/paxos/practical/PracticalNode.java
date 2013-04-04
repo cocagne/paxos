@@ -1,17 +1,21 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.practical;
 
-public class PracticalNode implements Proposer, Acceptor, Learner {
+import cocagne.paxos.essential.EssentialLearner;
+import cocagne.paxos.essential.EssentialLearnerImpl;
+import cocagne.paxos.essential.ProposalID;
 
-	protected PracticalProposer proposer;
-	protected PracticalAcceptor acceptor;
-	protected EssentialLearner  learner;
+public class PracticalNode implements PracticalProposer, PracticalAcceptor, EssentialLearner {
+
+	protected PracticalProposerImpl proposer;
+	protected PracticalAcceptorImpl acceptor;
+	protected EssentialLearnerImpl  learner;
 	
 	public PracticalNode(PracticalMessenger messenger, String proposerUID,
 			int quorumSize) {
 		
-		proposer = new PracticalProposer(messenger, proposerUID, quorumSize);
-		acceptor = new PracticalAcceptor(messenger);
-		learner  = new EssentialLearner(messenger, quorumSize);
+		proposer = new PracticalProposerImpl(messenger, proposerUID, quorumSize);
+		acceptor = new PracticalAcceptorImpl(messenger);
+		learner  = new EssentialLearnerImpl(messenger, quorumSize);
 	}
 	
 	public boolean isActive() {
@@ -99,7 +103,7 @@ public class PracticalNode implements Proposer, Acceptor, Learner {
 		proposer.receivePromise(fromUID, proposalID, prevAcceptedID, prevAcceptedValue);
 	}
 	
-	public EssentialMessenger getMessenger() {
+	public PracticalMessenger getMessenger() {
 		return proposer.getMessenger();
 	}
 

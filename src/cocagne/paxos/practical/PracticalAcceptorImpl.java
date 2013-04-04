@@ -1,25 +1,33 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.practical;
 
-public class PracticalAcceptor extends EssentialAcceptor {
+import cocagne.paxos.essential.EssentialAcceptorImpl;
+import cocagne.paxos.essential.ProposalID;
+
+public class PracticalAcceptorImpl extends EssentialAcceptorImpl implements PracticalAcceptor {
 	
 	protected String  pendingAccepted = null;
 	protected String  pendingPromise  = null;
 	protected boolean active          = true;
 	
-	public PracticalAcceptor(PracticalMessenger messenger) {
+	public PracticalAcceptorImpl(PracticalMessenger messenger) {
 		super(messenger);
 	}
 
+
+	@Override
 	public boolean persistenceRequired() {
 		return pendingAccepted != null || pendingPromise != null;
 	}
 	
+
+	@Override
 	public void recover(ProposalID promisedID, ProposalID acceptedID, Object acceptedValue) {
 		this.promisedID    = promisedID;
 		this.acceptedID    = acceptedID;
 		this.acceptedValue = acceptedValue;
 	}
 	
+
 	@Override
 	public void receivePrepare(String fromUID, ProposalID proposalID) {
 		if (this.promisedID != null && proposalID.equals(promisedID)) { // duplicate message
@@ -39,6 +47,7 @@ public class PracticalAcceptor extends EssentialAcceptor {
 		}
 	}
 	
+
 	@Override
 	public void receiveAcceptRequest(String fromUID, ProposalID proposalID,
 			Object value) {
@@ -62,6 +71,8 @@ public class PracticalAcceptor extends EssentialAcceptor {
 		}
 	}
 	
+
+	@Override
 	public void persisted() {
 		if (active) {
 			if (pendingPromise != null)
@@ -73,10 +84,14 @@ public class PracticalAcceptor extends EssentialAcceptor {
 		pendingAccepted = null;
 	}
 
+
+	@Override
 	public boolean isActive() {
 		return active;
 	}
 
+
+	@Override
 	public void setActive(boolean active) {
 		this.active = active;
 	}

@@ -1,6 +1,7 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.essential;
 
-public interface Learner {
+
+public interface EssentialLearner {
 
 	public boolean isComplete();
 	

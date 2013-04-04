@@ -1,4 +1,7 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.practical;
+
+import cocagne.paxos.essential.EssentialMessenger;
+import cocagne.paxos.essential.ProposalID;
 
 public interface PracticalMessenger extends EssentialMessenger {
 	

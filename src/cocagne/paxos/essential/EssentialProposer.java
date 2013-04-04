@@ -1,6 +1,7 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.essential;
 
-public interface Proposer {
+
+public interface EssentialProposer {
 	
 	public void setProposal(Object value);
 	

@@ -1,6 +1,9 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.functional;
 
 import java.util.HashSet;
+
+import cocagne.paxos.essential.ProposalID;
+import cocagne.paxos.practical.PracticalNode;
 
 public class HeartbeatNode extends PracticalNode {
 	

@@ -1,8 +1,9 @@
-package tom.cocagne.paxos;
+package cocagne.paxos.essential;
 
 import java.util.HashMap;
 
-public class EssentialLearner implements Learner {
+
+public class EssentialLearnerImpl implements EssentialLearner {
 	
 	class Proposal {
 		int    acceptCount;
@@ -23,7 +24,7 @@ public class EssentialLearner implements Learner {
 	private Object                        finalValue      = null;
 	private ProposalID                    finalProposalID = null;
 	
-	public EssentialLearner( EssentialMessenger messenger, int quorumSize ) {
+	public EssentialLearnerImpl( EssentialMessenger messenger, int quorumSize ) {
 		this.messenger  = messenger;
 		this.quorumSize = quorumSize;
 	}
