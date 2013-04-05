@@ -7,26 +7,33 @@ v2.0, January 2013
 Overview
 --------
 
-This repository contains a basic implementation of the Paxos algorithm. The
+Plain Paxos provides basic implementations of the Paxos algorithm. The
 distinguishing characteristic of this implementation, as compared to other
 freely available and open-source implementations, is that this library is
-completely independent of application domains and networking
-infrastructures. Whereas most Paxos implementations are deeply and inextricably
-embedded within application-specific logic, this implementation focuses on
-encapsulating the Paxos algorithm within opaque and easily re-usable classes.
+independent of application domains and networking infrastructures. Whereas most
+Paxos implementations are deeply and inextricably embedded within
+application-specific logic, this implementation focuses on encapsulating the
+Paxos algorithm within opaque and easily re-usable classes.
 
-The goal of this library is to provide an algorithmically correct Paxos
-implementation that may be used for educational purposes in addition to direct
-use in networked applications. This implementation is specifically designed to
-facilitate understanding of both the essential Paxos algorithm as well as the
-practical considerations that must be taken into account for real-world
-use. 
+This library provides an algorithmically correct Paxos implementation that may
+be used for educational purposes in addition to direct use in networked
+applications. This implementation is specifically designed to facilitate
+understanding of both the essential Paxos algorithm as well as the practical
+considerations that must be taken into account for real-world use.
+
+Implementations in both Python and Java are provided. They are functionally
+identical and share the same unit tests. The unit tests are written in Python
+and may be used to excercise the Java implementation if a Jython interpreter
+is available.
 
 
-Implementation
---------------
+Implementations
+---------------
 
-### essential.py
+### Python
+
+
+#### essential.py
 
 
 This module provides a direct and minimal implementation of the essential Paxos
@@ -35,14 +42,14 @@ easy contrast between the implementation of the pure algorithm and that of the
 one enhanced for practicality.
 
 
-### practical.py
+#### practical.py
 
 
 This module enhances the essential Paxos algorithm and adds support for such
 things as leadership tracking, NACKs, and state persistence.
 
 
-### functional.py
+#### functional.py
 
 
 This module provides a fully-functional Paxos implementation that employs
@@ -50,7 +57,7 @@ a simple heartbeating mechanism to detect leadership failure and initiate
 recovery.
 
 
-### durable.py
+#### durable.py
 
 
 Correct implementations of the Paxos algorithm require saving Acceptor
@@ -61,10 +68,29 @@ inopportune time. This module implements a very simple mechanism for efficiently
 saving application state to disk. 
 
 
+### Java
+
+The Java implementation is functionally identical to that of the Python
+implementation and is broken out into Java packages that mirror the 
+python modules. 
+
+#### cocagne.paxos.essential
+#### cocagne.paxos.practical
+#### cocagne.paxos.functional
+
+
+
 Testing
 -------
 
-As this library serves to provide correctness guarantees to higher-level consumers,
-this library's testing must be comprehensive and exhaustive. The `test`
-directory of the root source code repository contains the unittest files used to
-excersise the implementation. 
+As this library serves to provide correctness guarantees to higher-level
+consumers, this library's testing must be comprehensive and exhaustive. The
+`test` directory of the root source code repository contains the unittest files
+used to excersise the implementation.
+
+The *primary* tests are written in Python and correspond to the essential,
+practical, functional, and durable modules. The Java tests, which are also
+written in Python, wrap the Java classes with a compatible interface and use
+the Python unit tests to exercise the Java implementation. The Jython
+interpreter is required for running these tests but it is not required at
+runtime.
