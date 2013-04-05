@@ -41,6 +41,16 @@ public class PracticalNode implements PracticalProposer, PracticalAcceptor, Esse
 		learner.receiveAccepted(fromUID, proposalID, acceptedValue);
 
 	}
+	
+	@Override
+	public Object getFinalValue() {
+		return learner.getFinalValue();
+	}
+
+	@Override
+	public ProposalID getFinalProposalID() {
+		return learner.getFinalProposalID();
+	}
 
 	//-------------------------------------------------------------------------
 	// Acceptor

@@ -38,6 +38,22 @@ public class HeartbeatNode extends PracticalNode {
 	public long timestamp() {
 		return System.currentTimeMillis();
 	}
+	
+	public String getLeaderUID() {
+		return leaderUID;
+	}
+	
+	public ProposalID getLeaderProposalID() {
+		return leaderProposalID;
+	}
+	
+	public void setLeaderProposalID( ProposalID newLeaderID ) {
+		leaderProposalID = newLeaderID;
+	}
+	
+	public boolean isAcquiringLeadership() {
+		return acquiringLeadership;
+	}
 
 	@Override
 	public void prepare(boolean incrementProposalNumber) {
@@ -95,7 +111,7 @@ public class HeartbeatNode extends PracticalNode {
 		}
 	}
 
-	private void acquireLeadership() {
+	public void acquireLeadership() {
 		if (leaderIsAlive())
 			acquiringLeadership = false;
 		else {

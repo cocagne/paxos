@@ -376,3 +376,7 @@ class PracticalAcceptorTester(PracticalAcceptorTests, PracticalMessenger, unitte
 
 class PracticalLearnerTester(PracticalLearnerTests, PracticalMessenger, unittest.TestCase):
     learner_factory = TNode
+
+if __name__ == '__main__':
+    unittest.main()
+

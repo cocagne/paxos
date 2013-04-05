@@ -62,19 +62,17 @@ class HNode(functional.HeartbeatNode):
     hb_period       = 2
     liveness_window = 6
 
-    def __init__(self, messenger, *args):
-        self.timestamp = messenger.timestamp
-        super(HNode,self).__init__(messenger, *args)
+    def timestamp(self):
+        return self.messenger.timestamp()
 
         
         
-class HeartbeatTester (HeartbeatMessenger, unittest.TestCase):
+class HeartbeatTests (object):
 
+    node_factory = None
     
-    def setUp(self):
-        super(HeartbeatTester,self).setUp()
-        self.msetup()
-        self.l = HNode(self, 'A', 3)
+    def create_node(self):
+        self.l = self.node_factory(self, 'A', 3)
 
         
     def p(self):
@@ -100,15 +98,6 @@ class HeartbeatTester (HeartbeatMessenger, unittest.TestCase):
         
         self.assertEquals( self.l.proposal_id, PID(1,'A') )
 
-
-    def test_leader_constructor(self):
-        self.ae(self.l.leader_uid,           None)
-        self.ae(self.l.leader_proposal_id,   PID(1,None))
-        self.ae(self.l.next_proposal_number, 1)
-        n = HNode(self, 'A', 3, 'A')
-        self.ae(n.leader_uid,           'A')
-        self.ae(n.leader_proposal_id,   PID(1,'A'))
-        self.ae(n.next_proposal_number, 2)
 
 
     def test_initial_leader(self):
@@ -269,6 +258,15 @@ class HeartbeatTester (HeartbeatMessenger, unittest.TestCase):
         self.am('accept', PID(2,'A'), 'foo')
 
         self.assertEquals( self.tleader, 'gained' )
+
+
+class HeartbeatTester(HeartbeatTests, HeartbeatMessenger, unittest.TestCase):
+    node_factory = HNode
+
+    def setUp(self):
+        super(HeartbeatTester,self).setUp()
+        self.msetup()
+        self.create_node()
         
 
 
@@ -301,3 +299,7 @@ class HeartbeatLearnerTester(test_practical.PracticalLearnerTests,
     def setUp(self):
         super(HeartbeatLearnerTester,self).setUp()
         self.msetup()
+
+if __name__ == '__main__':
+    unittest.main()
+

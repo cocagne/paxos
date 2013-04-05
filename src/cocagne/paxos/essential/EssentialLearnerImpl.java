@@ -77,10 +77,12 @@ public class EssentialLearnerImpl implements EssentialLearner {
 		return quorumSize;
 	}
 
+	@Override
 	public Object getFinalValue() {
 		return finalValue;
 	}
 
+	@Override
 	public ProposalID getFinalProposalID() {
 		return finalProposalID;
 	}

@@ -352,3 +352,7 @@ class EssentialAcceptorTester(EssentialAcceptorTests, EssentialMessenger, unitte
 
 class EssentialLearnerTester(EssentialLearnerTests, EssentialMessenger, unittest.TestCase):
     learner_factory = TLearner
+
+if __name__ == '__main__':
+    unittest.main()
+

@@ -1,4 +1,4 @@
-#!/home/tcocagne/jython2.7b1/jython
+#!/usr/bin/env jython
 
 import sys
 import os.path
