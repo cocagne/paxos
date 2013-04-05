@@ -21,10 +21,7 @@ applications. This implementation is specifically designed to facilitate
 understanding of both the essential Paxos algorithm as well as the practical
 considerations that must be taken into account for real-world use.
 
-Implementations in both Python and Java are provided. They are functionally
-identical and share the same unit tests. The unit tests are written in Python
-and may be used to excercise the Java implementation if a Jython interpreter
-is available.
+Implementations in both Python and Java are provided. 
 
 
 Implementations
@@ -72,7 +69,8 @@ saving application state to disk.
 
 The Java implementation is functionally identical to that of the Python
 implementation and is broken out into Java packages that mirror the 
-python modules. 
+python modules. Refer to the corresponding Python APIs for class and
+method documentation.
 
 #### cocagne.paxos.essential
 #### cocagne.paxos.practical
