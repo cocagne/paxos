@@ -54,6 +54,15 @@ a simple heartbeating mechanism to detect leadership failure and initiate
 recovery.
 
 
+#### external.py
+
+This module provides an enhanced version of practical.py that supports
+the use of external failure detectors to drive leadership management. This module
+does not provide a fully-functional solution to leadership management, as does
+functional.py. However, it may serve as the basis for much more flexible, 
+application-specific leadership management.
+
+
 #### durable.py
 
 
