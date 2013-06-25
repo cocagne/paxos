@@ -1,5 +1,5 @@
-Plain Paxos 
-===========
+Essential Paxos 
+===============
 Tom Cocagne &lt;tom.cocagne@gmail.com&gt;  
 v2.0, January 2013
 
@@ -7,7 +7,7 @@ v2.0, January 2013
 Overview
 --------
 
-Plain Paxos provides basic implementations of the Paxos algorithm. The
+Essential Paxos provides basic implementations of the Paxos algorithm. The
 distinguishing characteristic of this implementation, as compared to other
 freely available and open-source implementations, is that this library is
 independent of application domains and networking infrastructures. Whereas most
