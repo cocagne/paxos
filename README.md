@@ -24,6 +24,14 @@ considerations that must be taken into account for real-world use.
 Implementations in both Python and Java are provided. 
 
 
+Python Installation
+-------------------
+
+```bash
+$ easy_install essential-paxos
+```
+
+
 Implementations
 ---------------
 
