@@ -333,7 +333,23 @@ class PracticalAcceptorTests (test_essential.EssentialAcceptorTests):
 
 
 class PracticalLearnerTests (test_essential.EssentialLearnerTests):
-    pass
+
+    def test_basic_resolution_final_acceptors(self):
+        self.ae( self.l.final_acceptors, None )
+        self.l.recv_accepted( 'A', PID(1,'A'), 'foo' )
+        self.l.recv_accepted( 'B', PID(1,'A'), 'foo' )
+        self.ae( self.l.final_acceptors, set(['A','B']) )
+
+    def test_add_to_final_acceptors_after_resolution(self):
+        self.test_basic_resolution_final_acceptors()
+        self.l.recv_accepted( 'C', PID(1,'A'), 'foo' )
+        self.ae( self.l.final_acceptors, set(['A','B', 'C']) )
+
+    def test_add_to_final_acceptors_after_resolution_with_pid_mismatch(self):
+        self.test_basic_resolution_final_acceptors()
+        self.l.recv_accepted( 'C', PID(0,'A'), 'foo' )
+        self.ae( self.l.final_acceptors, set(['A','B', 'C']) )
+        
 
 
     
