@@ -9,7 +9,7 @@ Introductory Note
 
 This repository contains the results of my first foray into providing both a
 useful and educational Paxos implementation. The repository is in pretty good
-shape and still fills it's intended role but the design includes explicit
+shape and still fills its intended role but the design includes explicit
 support for sending network messages. I now consider this something of an
 anti-pattern for Paxos implementations and recommend using an even more tightly
 constrained library that implements the core algorithm and nothing else,
