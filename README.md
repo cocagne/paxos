@@ -4,6 +4,25 @@ Tom Cocagne &lt;tom.cocagne@gmail.com&gt;
 v2.0, January 2013
 
 
+Introductory Note
+-----------------
+
+This repository contains the results of my first foray into providing both a
+useful and educational Paxos implementation. The repository is in pretty good
+shape and still fills it's intended role but the design includes explicit
+support for sending network messages. I now consider this something of an
+anti-pattern for Paxos implementations and recommend using an even more tightly
+constrained library that implements the core algorithm and nothing else,
+including messaging. To that end, I've put together the
+[python-composable-paxos](https://github.com/cocagne/python-composable-paxos)
+repository and a
+[multi-paxos-example](https://github.com/cocagne/multi-paxos-example) based upon
+it. Those repositories should generally be preferred over this one.
+Additionally, I've put together an [introductory paper on Paxos and
+Multi-Paxos](https://understandingpaxos.wordpress.com/) that may be useful for
+individuals like myself that find the existing papers somewhat opaque.
+
+
 Overview
 --------
 
@@ -98,14 +117,10 @@ method documentation.
 Testing
 -------
 
-As this library serves to provide correctness guarantees to higher-level
-consumers, this library's testing must be comprehensive and exhaustive. The
-`test` directory of the root source code repository contains the unittest files
-used to excersise the implementation.
-
-The *primary* tests are written in Python and correspond to the essential,
-practical, functional, and durable modules. The Java tests, which are also
-written in Python, wrap the Java classes with a compatible interface and use
-the Python unit tests to exercise the Java implementation. The Jython
-interpreter is required for running these tests but it is not required at
-runtime.
+The `test` directory of the root source code repository contains the unittest
+files used to excersise the implementation. The *primary* tests are written in
+Python and correspond to the essential, practical, functional, and durable
+modules. The Java tests, which are also written in Python, wrap the Java classes
+with a compatible interface and use the Python unit tests to exercise the Java
+implementation. The Jython interpreter is required for running these tests but
+it is not required at runtime.
