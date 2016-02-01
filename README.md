@@ -18,7 +18,7 @@ including messaging. To that end, I've put together the
 repository and a
 [multi-paxos-example](https://github.com/cocagne/multi-paxos-example) based upon
 it. Those repositories should generally be preferred over this one.
-Additionally, I've put together an [introductory paper on Paxos and
+Additionally, I've written an [introductory paper on Paxos and
 Multi-Paxos](https://understandingpaxos.wordpress.com/) that may be useful for
 individuals like myself that find the existing papers somewhat opaque.
 
