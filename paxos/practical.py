@@ -27,10 +27,10 @@ class Messenger (essential.Messenger):
         callback is exectued. Use this method with care.
 
         The safe way to guarantee leadership is to use a full Paxos instance
-        whith the resolution value being the UID of the leader node. To avoid
+        with the resolution value being the UID of the leader node. To avoid
         potential issues arising from timing and/or failure, the election
         result may be restricted to a certain time window. Prior to the end of
-        the window the leader may attempt to re-elect itself to extend it's
+        the window the leader may attempt to re-elect itself to extend its
         term in office.
         '''
 
@@ -40,11 +40,11 @@ class Proposer (essential.Proposer):
     This class extends the functionality of the essential Proposer
     implementation by tracking whether the proposer believes itself to
     be the current leader of the Paxos instance. It also supports a flag
-    to disable active paritcipation in the Paxos instance.
+    to disable active participation in the Paxos instance.
 
     The 'leader' attribute is a boolean value indicating the Proposer's
     belief in whether or not it is the current leader. As the documentation
-    for the Messenger.on_leadership_acquired() method describes, multiple
+    for the Messenger.on_leadership_acquired() method describes multiple
     nodes may simultaneously believe themselves to be the leader.
 
     The 'active' attribute is a boolean value indicating whether or not
@@ -155,7 +155,7 @@ class Proposer (essential.Proposer):
 class Acceptor (essential.Acceptor):
     '''
     Acceptors act as the fault-tolerant memory for Paxos. To ensure correctness
-    in the presense of failure, Acceptors must be able to remember the promises
+    in the presence of failure, Acceptors must be able to remember the promises
     they've made even in the event of power outages. Consequently, any changes
     to the promised_id, accepted_id, and/or accepted_value must be persisted to
     stable media prior to sending promise and accepted messages. After calling
