@@ -20,7 +20,7 @@ corrupted-on-disk, the implementation will assume the initial write failed and
 will return the previously saved state (assuming it isn't similarly
 corrupted). Consequently, there is a small but real chance that an application
 may save its state with this implementation, make promises to external
-entities, crash, and reneg on those promises after recovery. The likelyhood is,
+entities, crash, and reneg on those promises after recovery. The likelihood is,
 of course, very very low so this implementation should be suitable for most
 "good" reliability systems. Just don't implement a life-support system based on
 this code...
