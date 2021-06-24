@@ -118,7 +118,7 @@ Testing
 -------
 
 The `test` directory of the root source code repository contains the unittest
-files used to excersise the implementation. The *primary* tests are written in
+files used to exercise the implementation. The *primary* tests are written in
 Python and correspond to the essential, practical, functional, and durable
 modules. The Java tests, which are also written in Python, wrap the Java classes
 with a compatible interface and use the Python unit tests to exercise the Java

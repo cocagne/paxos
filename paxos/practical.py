@@ -21,10 +21,10 @@ class Messenger (essential.Messenger):
 
     def on_leadership_acquired(self):
         '''
-        Called when leadership has been aquired. This is not a guaranteed
+        Called when leadership has been acquired. This is not a guaranteed
         position. Another node may assume leadership at any time and it's
         even possible that another may have successfully done so before this
-        callback is exectued. Use this method with care.
+        callback is executed. Use this method with care.
 
         The safe way to guarantee leadership is to use a full Paxos instance
         with the resolution value being the UID of the leader node. To avoid

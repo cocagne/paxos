@@ -34,7 +34,7 @@ class ExternalNode (practical.Node):
     of eternal leadership battles is also the responsibility of the caller.
 
     When leadership is acquired, the node will broadcast a leadership proclamation,
-    delcaring itself the leader of the instance. This relieves peer nodes of the
+    declaring itself the leader of the instance. This relieves peer nodes of the
     responsibility of tracking promises for all prepare messages.
     '''
 
