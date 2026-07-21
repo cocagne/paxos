@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools._distutils.core import setup
 
 long_description = '''
 Essential Paxos provides basic implementations of the Paxos algorithm. The
